@@ -18,3 +18,6 @@ class ArticleNotFound(ResourceNotFound):
 
 class FeedAlreadyExists(ResourceAlreadyExists):
     pass
+
+class FeedNotFound(Exception):
+    pass

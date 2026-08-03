@@ -8,6 +8,11 @@ from app.services.article_service import ArticleService
 from app.repositories.feed_repository import FeedRepository
 from app.services.feed_service import FeedService
 
+from app.services.rss_service import RSSService
+
+
+def get_rss_service():
+    return RSSService()
 
 def get_article_service(
     db: Session = Depends(get_db),

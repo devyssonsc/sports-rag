@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends
 
 from app.schemas.feed import FeedCreate, FeedResponse
 from app.services.feed_service import FeedService
-from app.api.dependencies import get_feed_service
+from app.api.dependencies import get_feed_service, get_rss_service
 import logging
+
+from app.services.rss_service import RSSService
 
 logger = logging.getLogger(__name__)
 
@@ -22,3 +24,14 @@ def list_feeds(
     service: FeedService = Depends(get_feed_service)
 ):
     return service.list_feeds()
+
+@router.post("/{feed_id}/fetch")
+def fetch_feed(
+    feed_id: int,
+    feed_service: FeedService = Depends(get_feed_service),
+    rss_service: RSSService = Depends(get_rss_service),
+):
+
+    feed = feed_service.get(feed_id)
+
+    return rss_service.parse(feed.url)

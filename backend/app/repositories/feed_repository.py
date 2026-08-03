@@ -25,3 +25,10 @@ class FeedRepository:
     def list(self) -> list[Feed]:
         statement = select(Feed)
         return list(self.db.scalars(statement).all())
+    
+    def get(self, feed_id: int) -> Feed | None:
+        return (
+            self.db.query(Feed)
+            .filter(Feed.id == feed_id)
+            .first()
+        )
