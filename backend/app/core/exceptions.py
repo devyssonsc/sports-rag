@@ -15,3 +15,6 @@ class ArticleAlreadyExists(ResourceAlreadyExists):
 
 class ArticleNotFound(ResourceNotFound):
     pass
+
+class FeedAlreadyExists(ResourceAlreadyExists):
+    pass

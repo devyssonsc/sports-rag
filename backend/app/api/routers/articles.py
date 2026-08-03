@@ -13,7 +13,6 @@ def create_article(
 ):
     return service.create_article(article)
 
-
 @router.get("", response_model=list[ArticleResponse])
 def list_articles(
     service: ArticleService = Depends(get_article_service)

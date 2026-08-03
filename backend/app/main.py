@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.routers.articles import router as article_router
+from app.api.routers.feeds import router as feed_router
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(article_router)
+app.include_router(feed_router)
 
 @app.exception_handler(ArticleAlreadyExists)
 async def article_exists_handler(
