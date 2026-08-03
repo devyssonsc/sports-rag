@@ -1,6 +1,11 @@
 from app.models.article import Article
 from app.repositories.article_repository import ArticleRepository
 from app.schemas.article import ArticleCreate
+
+from app.repositories.chunk_repository import ChunkRepository
+from app.schemas.article_chunks import ArticleChunksResponse
+from app.schemas.chunk import ChunkResponse
+
 import logging
 
 from app.core.exceptions import (
@@ -11,11 +16,44 @@ from app.core.exceptions import (
 logger = logging.getLogger(__name__)
 
 class ArticleService:
-    def __init__(self, repository: ArticleRepository):
-        self.repository = repository
+
+    def __init__(
+        self,
+        article_repository: ArticleRepository,
+        chunk_repository: ChunkRepository,
+    ):
+        self.article_repository = article_repository
+        self.chunk_repository = chunk_repository
+        
+    def get_chunks(
+        self,
+        article_id: int,
+    ) -> ArticleChunksResponse:
+
+        article = self.article_repository.get_by_id(article_id)
+
+        if article is None:
+            raise ValueError("Article not found")
+
+        chunks = self.chunk_repository.get_by_article_id(article_id)
+
+        return ArticleChunksResponse(
+            article_id=article.id,
+            title=article.title,
+            chunk_count=len(chunks),
+            chunks=[
+                ChunkResponse(
+                    id=chunk.id,
+                    index=chunk.chunk_index,
+                    length=len(chunk.content),
+                    content=chunk.content,
+                )
+                for chunk in chunks
+            ],
+        )
 
     def create_article(self, article_data: ArticleCreate) -> Article:
-        existing_article = self.repository.get_by_url(article_data.url)
+        existing_article = self.article_repository.get_by_url(article_data.url)
 
         if existing_article:
             raise ArticleAlreadyExists(
@@ -31,19 +69,19 @@ class ArticleService:
         
         logger.info("Creating Article")
 
-        return self.repository.create(article)
+        return self.article_repository.create(article)
 
     def list_articles(self) -> list[Article]:
-        return self.repository.list()
+        return self.article_repository.list()
 
     def get_article(self, article_id: int) -> Article | None:
-        return self.repository.get_by_id(article_id)
+        return self.article_repository.get_by_id(article_id)
 
     def delete_article(self, article_id: int) -> None:
-        article = self.repository.get_by_id(article_id)
+        article = self.article_repository.get_by_id(article_id)
 
         raise ArticleNotFound(
             f"Article {article_id} not found."
         )
 
-        self.repository.delete(article)
+        self.article_repository.delete(article)

@@ -15,9 +15,12 @@ class ArticleResponse(BaseModel):
 
     id: int
     title: str
+    summary: str | None
+    content: str | None
     url: str
     source: str
-    published_at: datetime
+    feed_id: int | None
+    published_at: datetime | None
     created_at: datetime
     
 class ArticleUpdate(BaseModel):
