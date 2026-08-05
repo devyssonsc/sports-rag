@@ -2,9 +2,13 @@ fastapi
 uvicorn[standard]
 pydantic-settings
 
+qdrant-client
 sqlalchemy
 alembic
 psycopg[binary]
 
 feedparser
 trafilatura
+together
+
+llama-index-core

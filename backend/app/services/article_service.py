@@ -40,6 +40,7 @@ class ArticleService:
         return ArticleChunksResponse(
             article_id=article.id,
             title=article.title,
+            content_length=len(article.content),
             chunk_count=len(chunks),
             chunks=[
                 ChunkResponse(
@@ -85,3 +86,15 @@ class ArticleService:
         )
 
         self.article_repository.delete(article)
+        
+    def get_raw_article(
+        self,
+        article_id: int,
+    ):
+
+        article = self.article_repository.get_by_id(article_id)
+
+        if article is None:
+            return None
+
+        return article

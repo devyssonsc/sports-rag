@@ -8,17 +8,24 @@ from app.models.feed import Feed
 from app.services.article_content_service import ArticleContentService
 from app.services.chunk_service import ChunkService
 
+from app.services.embedding_service import EmbeddingService
+from app.repositories.vector_repository import VectorRepository
+
 class IngestionService:
 
     def __init__(
         self,
         article_repository: ArticleRepository,
         article_content_service: ArticleContentService,
-        chunk_service: ChunkService
+        chunk_service: ChunkService,
+        embedding_service: EmbeddingService,
+        vector_repository: VectorRepository,
     ):
         self.article_repository = article_repository
         self.article_content_service = article_content_service
         self.chunk_service = chunk_service
+        self.embedding_service = embedding_service
+        self.vector_repository = vector_repository
 
     def ingest(
         self,
@@ -53,11 +60,24 @@ class IngestionService:
             )
 
             article = self.article_repository.create(article)
-            self.chunk_service.create_chunks(article)
-            
+
+            chunks = self.chunk_service.create_chunks(article)
+
+            for chunk in chunks:
+
+                embedding = self.embedding_service.embed_document(
+                    chunk.content
+                )
+
+                self.vector_repository.upsert_chunk_embedding(
+                    chunk_id=chunk.id,
+                    article_id=chunk.article_id,
+                    embedding=embedding,
+                )
+
             inserted += 1
             
-        return IngestionResult(        
+        return IngestionResult(
             processed=processed,
             inserted=inserted,
             ignored=ignored,

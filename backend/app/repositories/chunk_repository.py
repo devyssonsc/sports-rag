@@ -19,6 +19,9 @@ class ChunkRepository:
         self.db.add_all(chunks)
         self.db.commit()
         
+        for chunk in chunks:
+            self.db.refresh(chunk)
+        
     def get_by_article_id(
         self,
         article_id: int,

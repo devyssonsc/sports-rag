@@ -10,6 +10,10 @@ from app.repositories.chunk_repository import ChunkRepository
 from app.schemas.article_chunks import ArticleChunksResponse
 from app.schemas.article_chunks import ChunkResponse
 
+from fastapi import HTTPException
+
+from app.schemas.article import ArticleRawResponse
+
 router = APIRouter(prefix="/articles", tags=["Articles"])
 
 @router.get(
@@ -63,4 +67,27 @@ def get_article_chunks(
             )
             for chunk in chunks
         ],
+    )
+
+@router.get(
+    "/{article_id}/raw",
+    response_model=ArticleRawResponse,
+)
+def get_raw_article(
+    article_id: int,
+    service: ArticleService = Depends(get_article_service),
+):
+
+    article = service.get_raw_article(article_id)
+
+    if article is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Article not found.",
+        )
+
+    return ArticleRawResponse(
+        article_id=article.id,
+        repr=repr(article.content),
+        content=article.content,
     )

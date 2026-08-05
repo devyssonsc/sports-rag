@@ -27,3 +27,11 @@ class ArticleUpdate(BaseModel):
     title: str | None = None
     source: str | None = None
     published_at: datetime | None = None
+    
+from pydantic import BaseModel
+
+
+class ArticleRawResponse(BaseModel):
+    article_id: int
+    repr: str
+    content: str

@@ -15,9 +15,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/feeds", tags=["Feeds"])
 
-from app.services.article_content_service import ArticleContentService
-from app.services.chunking_service import ChunkingService
-
 @router.post("", response_model=FeedResponse)
 def create_feed(
     feed: FeedCreate,
