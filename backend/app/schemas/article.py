@@ -19,7 +19,7 @@ class ArticleResponse(BaseModel):
     content: str | None
     url: str
     source: str
-    feed_id: int | None
+    news_source_id: int | None
     published_at: datetime | None
     created_at: datetime
     

@@ -1,4 +1,5 @@
-from app.models.feed import Feed
+from app.core.exceptions import UnsupportedNewsSourceType
+from app.models.news_source import NewsSource
 from app.models.source_type import SourceType
 
 from app.services.discovery.base import DiscoveryStrategy
@@ -9,14 +10,14 @@ class DiscoveryFactory:
 
     def get(
         self,
-        feed: Feed,
+        news_source: NewsSource,
     ) -> DiscoveryStrategy:
 
-        match feed.type:
+        match news_source.type:
 
             case SourceType.RSS:
                 return RSSDiscovery()
 
-        raise ValueError(
-            f"Unsupported source type: {feed.type}"
+        raise UnsupportedNewsSourceType(
+            f"Unsupported source type: {news_source.type}"
         )

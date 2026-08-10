@@ -3,7 +3,7 @@ from app.dto.source_article import SourceArticle
 from app.models.article import Article
 
 from app.schemas.ingestion import IngestionResult
-from app.models.feed import Feed
+from app.models.news_source import NewsSource
 
 from app.services.article_content_service import ArticleContentService
 from app.services.chunk_service import ChunkService
@@ -29,7 +29,7 @@ class IngestionService:
 
     def ingest(
         self,
-        feed: Feed,
+        news_source: NewsSource,
         articles: list[SourceArticle],
     ) -> IngestionResult:
         
@@ -37,26 +37,26 @@ class IngestionService:
         inserted = 0
         ignored = 0
 
-        for rss_article in articles:
+        for source_article in articles:
 
-            existing = self.article_repository.get_by_url(rss_article.url)
+            existing = self.article_repository.get_by_url(source_article.url)
 
             if existing:
                 ignored += 1
                 continue
             
             content = self.article_content_service.extract(
-                                rss_article.url
+                                source_article.url
                             )
 
             article = Article(
-                title=rss_article.title,
-                summary=rss_article.summary,
+                title=source_article.title,
+                summary=source_article.summary,
                 content = content,
-                url=rss_article.url,
-                source=rss_article.source,
-                published_at=rss_article.published_at,
-                feed_id=feed.id
+                url=source_article.url,
+                source=source_article.source,
+                published_at=source_article.published_at,
+                news_source_id=news_source.id
             )
 
             article = self.article_repository.create(article)

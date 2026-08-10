@@ -37,13 +37,27 @@ Current implementation:
 
 - RSSDiscovery
 
+Current source model:
+
+- NewsSource
+
+Current functional source types:
+
+- RSS
+
+Known but not yet functional source types:
+
+- CRAWL
+
 Planned implementations:
 
 - CrawlDiscovery (Crawl4AI)
 - API-based discovery
 - Additional providers
 
-The correct strategy is selected through a DiscoveryFactory according to the configured SourceType.
+The correct strategy is selected through a DiscoveryFactory according to the configured SourceType on the NewsSource.
+
+Until CrawlDiscovery exists, sources configured with SourceType.CRAWL are rejected during creation instead of being accepted and failing later during fetch.
 
 ---
 

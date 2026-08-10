@@ -90,6 +90,7 @@ Support different article discovery mechanisms.
 
 - Crawl4AI integration
 - Multiple discovery strategies
+- NewsSource-based source configuration
 - Metadata normalization
 - Date normalization
 - Source-specific improvements

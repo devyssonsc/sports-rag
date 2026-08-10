@@ -16,8 +16,13 @@ class ArticleAlreadyExists(ResourceAlreadyExists):
 class ArticleNotFound(ResourceNotFound):
     pass
 
-class FeedAlreadyExists(ResourceAlreadyExists):
+class NewsSourceAlreadyExists(ResourceAlreadyExists):
     pass
 
-class FeedNotFound(Exception):
+
+class NewsSourceNotFound(ResourceNotFound):
+    pass
+
+
+class UnsupportedNewsSourceType(DomainException):
     pass

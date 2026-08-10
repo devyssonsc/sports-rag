@@ -24,9 +24,12 @@ Both pipelines are independent but connected through the persisted data.
 ## High-Level Flow
 
 ```text
-News Source
+NewsSource
       │
       ▼
+SourceType
+      â”‚
+      â–¼
 DiscoveryFactory
       │
       ▼
@@ -55,7 +58,9 @@ EmbeddingService
 
 ### 1. Discovery
 
-The selected `DiscoveryStrategy` discovers available articles from a news source.
+The selected `DiscoveryStrategy` discovers available articles from a `NewsSource`.
+
+At the current stage, only `SourceType.RSS` is functional. `SourceType.CRAWL` exists in the domain model but is rejected during source creation until `CrawlDiscovery` is implemented.
 
 Output:
 

@@ -31,9 +31,12 @@ The main design principles are:
 ## News ingestion
 
 ```text
-News Source
+NewsSource
       │
       ▼
+SourceType
+      â”‚
+      â–¼
 Discovery Strategy
       │
       ▼
@@ -171,13 +174,21 @@ Current implementation:
 
 - RSSDiscovery
 
+Current functional source types:
+
+- RSS
+
+Known but not yet functional source types:
+
+- CRAWL
+
 Planned implementations:
 
 - CrawlDiscovery
 - API-based discovery
 - Other discovery strategies
 
-Selection is performed by DiscoveryFactory.
+Selection is performed by DiscoveryFactory using the NewsSource type.
 
 The output of every discovery strategy is:
 
@@ -328,7 +339,7 @@ Stores structured data.
 
 Current entities include:
 
-- feeds
+- news_sources
 - articles
 - chunks
 

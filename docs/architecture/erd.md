@@ -4,14 +4,14 @@
 
 The Sports RAG platform is composed of three core domain entities:
 
-- Feed
+- NewsSource
 - Article
 - Chunk
 
 Each entity has a single responsibility:
 
-- **Feed** represents an RSS source.
-- **Article** represents a news article retrieved from a feed.
+- **NewsSource** represents a source of news articles (currently RSS).
+- **Article** represents a news article discovered from a NewsSource.
 - **Chunk** represents a semantic fragment of an article that can be embedded and indexed in the vector database.
 
 The PostgreSQL database stores the application state, while Qdrant stores vector embeddings.
@@ -22,19 +22,15 @@ The PostgreSQL database stores the application state, while Qdrant stores vector
 
 ```text
                     ┌──────────────────────────┐
-                    │          Feed            │
+                    │        NewsSource        │
+                    │       (news_sources)     │
                     ├──────────────────────────┤
                     │ PK id                    │
                     │ name                     │
-                    │ url                      │
-                    │ language                 │
-                    │ country                  │
-                    │ sport                    │
-                    │ provider                 │
-                    │ is_active                │
-                    │ last_fetch_at            │
+                    │ url (unique)             │
+                    │ type (source_type enum)  │
+                    │ last_fetched_at (null)   │
                     │ created_at               │
-                    │ updated_at               │
                     └────────────┬─────────────┘
                                  │
                                  │ 1 : N
@@ -42,20 +38,17 @@ The PostgreSQL database stores the application state, while Qdrant stores vector
                                  ▼
                     ┌──────────────────────────┐
                     │         Article          │
+                    │        (articles)        │
                     ├──────────────────────────┤
                     │ PK id                    │
-                    │ FK feed_id              │
-                    │ title                   │
-                    │ url (unique)            │
-                    │ author                  │
-                    │ language                │
-                    │ summary                 │
-                    │ content                 │
-                    │ hash                    │
-                    │ status                  │
-                    │ published_at            │
-                    │ updated_at              │
-                    │ created_at              │
+                    │ FK news_source_id (null) │
+                    │ title                    │
+                    │ summary (null)           │
+                    │ content (null)           │
+                    │ url (unique)             │
+                    │ source                   │
+                    │ published_at (null)      │
+                    │ created_at               │
                     └────────────┬─────────────┘
                                  │
                                  │ 1 : N
@@ -63,17 +56,14 @@ The PostgreSQL database stores the application state, while Qdrant stores vector
                                  ▼
                     ┌──────────────────────────┐
                     │          Chunk           │
+                    │         (chunks)         │
                     ├──────────────────────────┤
                     │ PK id                    │
-                    │ FK article_id           │
-                    │ chunk_index             │
-                    │ content                 │
-                    │ token_count             │
-                    │ embedding_model         │
-                    │ embedding_status        │
-                    │ created_at              │
+                    │ FK article_id            │
+                    │ chunk_index              │
+                    │ content                  │
+                    │ created_at               │
                     └────────────┬─────────────┘
-                                 │
                                  │
                                  │ Indexed into
                                  ▼
@@ -81,24 +71,27 @@ The PostgreSQL database stores the application state, while Qdrant stores vector
                      │        Qdrant           │
                      ├─────────────────────────┤
                      │ Vector                  │
-                     │ Metadata                │
+                     │ Payload (chunk_id,      │
+                     │          article_id)    │
                      └─────────────────────────┘
 ```
+
+The `source_type` enum currently accepts `RSS` and `CRAWL`. Only `RSS` is functional; `CRAWL` sources are rejected at creation until a Crawl discovery strategy exists.
 
 ---
 
 # Relationships
 
-## Feed → Article
+## NewsSource → Article
 
-A feed can publish many articles.
+A news source can produce many articles.
 
-Each article belongs to exactly one feed.
+Each article optionally references the news source it came from (`news_source_id` is nullable).
 
 Relationship:
 
 ```
-Feed (1) ------ (N) Article
+NewsSource (1) ------ (N) Article
 ```
 
 ---
@@ -123,9 +116,9 @@ Each chunk may be indexed into Qdrant.
 
 The embedding vector itself is **not stored in PostgreSQL**.
 
-Instead, PostgreSQL stores only the chunk and its indexing status.
+Instead, PostgreSQL stores only the chunk and its content.
 
-Qdrant becomes the source of truth for vector search.
+The Qdrant payload references the persisted `chunk_id` and `article_id`, and Qdrant becomes the source of truth for vector search.
 
 ---
 
@@ -163,10 +156,10 @@ Duplicating vectors in PostgreSQL would increase storage without adding value.
 ## Processing Pipeline
 
 ```
-RSS Feed
+NewsSource
     │
     ▼
-Feed
+Discovery (RSS)
     │
     ▼
 Article

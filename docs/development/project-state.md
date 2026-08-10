@@ -1,4 +1,4 @@
-# Project State
+﻿# Project State
 
 ## Purpose
 
@@ -40,16 +40,17 @@ Current layers:
 
 ## News Sources
 
-Status: 🟡 In Progress
+Status: ðŸŸ¡ In Progress
 
 Implemented
 
-- Feed registration
-- Feed listing
-- Feed fetching
+- NewsSource registration
+- NewsSource listing
+- NewsSource fetching
 - SourceType support
 - DiscoveryFactory
 - RSSDiscovery
+- Rejection of CRAWL sources until CrawlDiscovery exists
 
 Pending
 
@@ -60,7 +61,7 @@ Pending
 
 ## Content Extraction
 
-Status: 🟢 Completed
+Status: ðŸŸ¢ Completed
 
 Implemented
 
@@ -75,7 +76,7 @@ Pending
 
 ## Text Cleaning
 
-Status: 🟢 Completed
+Status: ðŸŸ¢ Completed
 
 Implemented
 
@@ -87,7 +88,7 @@ Implemented
 
 ## Chunking
 
-Status: 🟢 Completed
+Status: ðŸŸ¢ Completed
 
 Implemented
 
@@ -101,7 +102,7 @@ Implemented
 
 ## Embeddings
 
-Status: 🟢 Completed
+Status: ðŸŸ¢ Completed
 
 Implemented
 
@@ -113,7 +114,7 @@ Implemented
 
 ## Vector Database
 
-Status: 🟢 Completed
+Status: ðŸŸ¢ Completed
 
 Implemented
 
@@ -126,7 +127,7 @@ Implemented
 
 ## Retrieval
 
-Status: 🟢 Completed
+Status: ðŸŸ¢ Completed
 
 Implemented
 
@@ -139,7 +140,7 @@ Implemented
 
 ## Prompt Generation
 
-Status: 🟢 Completed
+Status: ðŸŸ¢ Completed
 
 Implemented
 
@@ -150,7 +151,7 @@ Implemented
 
 ## LLM
 
-Status: 🟢 Completed
+Status: ðŸŸ¢ Completed
 
 Implemented
 
@@ -161,7 +162,7 @@ Implemented
 
 ## Chat
 
-Status: 🟢 Completed
+Status: ðŸŸ¢ Completed
 
 Implemented
 
@@ -186,7 +187,6 @@ Implemented
 
 # Current Technical Debt
 
-- Feed model still uses "Feed" nomenclature internally (planned migration to NewsSource).
 - Date normalization has not yet been implemented.
 - Metadata normalization between different providers has not yet been implemented.
 - CrawlDiscovery is not yet available.
@@ -195,11 +195,10 @@ Implemented
 
 # Next Milestones
 
-1. Complete Feed → NewsSource refactoring.
-2. Implement CrawlDiscovery.
-3. Integrate Crawl4AI.
-4. Normalize publication dates.
-5. Normalize metadata from different providers.
+1. Implement CrawlDiscovery.
+2. Integrate Crawl4AI.
+3. Normalize publication dates.
+4. Normalize metadata from different providers.
 
 ---
 

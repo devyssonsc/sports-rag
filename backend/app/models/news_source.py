@@ -7,14 +7,20 @@ from app.database.postgres import Base
 from app.models.source_type import SourceType
 
 
-class Feed(Base):
-    __tablename__ = "feeds"
+class NewsSource(Base):
+    __tablename__ = "news_sources"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     url: Mapped[str] = mapped_column(String(500), nullable=False, unique=True)
-    type: Mapped[SourceType] = mapped_column(Enum(SourceType, name="source_type"), nullable=False)
-    last_fetched_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    type: Mapped[SourceType] = mapped_column(
+        Enum(SourceType, name="source_type"),
+        nullable=False,
+    )
+    last_fetched_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

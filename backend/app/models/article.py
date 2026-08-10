@@ -24,8 +24,8 @@ class Article(Base):
         nullable=True,
     )
     
-    feed_id: Mapped[int | None] = mapped_column(
-        ForeignKey("feeds.id"),
+    news_source_id: Mapped[int | None] = mapped_column(
+        ForeignKey("news_sources.id"),
         nullable=True
     )
 
