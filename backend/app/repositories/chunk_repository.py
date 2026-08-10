@@ -33,3 +33,14 @@ class ChunkRepository:
             .order_by(Chunk.chunk_index)
             .all()
         )
+        
+    def get_by_ids(
+        self,
+        chunk_ids: list[int],
+    ) -> list[Chunk]:
+
+        return (
+            self.db.query(Chunk)
+            .filter(Chunk.id.in_(chunk_ids))
+            .all()
+        )

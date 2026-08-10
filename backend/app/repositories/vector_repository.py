@@ -59,3 +59,17 @@ class VectorRepository:
                     distance=Distance.COSINE,
                 ),
             )
+            
+    def search(
+        self,
+        embedding: list[float],
+        limit: int = 5,
+    ):
+
+        results = self.client.query_points(
+            collection_name=self.COLLECTION_NAME,
+            query=embedding,
+            limit=limit,
+        )
+
+        return results.points

@@ -25,6 +25,17 @@ class ArticleRepository:
     def list(self) -> list[Article]:
         statement = select(Article)
         return list(self.db.scalars(statement).all())
+    
+    def get_by_ids(
+        self,
+        article_ids: list[int],
+    ) -> list[Article]:
+
+        return (
+            self.db.query(Article)
+            .filter(Article.id.in_(article_ids))
+            .all()
+        )
 
     def delete(self, article: Article) -> None:
         self.db.delete(article)

@@ -19,6 +19,7 @@ from app.services.llama_index_chunking_service import LlamaIndexChunkingService
 from app.services.embedding_service import EmbeddingService
 from app.repositories.vector_repository import VectorRepository
 from app.services.text_cleaning_service import TextCleaningService
+from app.services.retrieval_service import RetrievalService
 
 def get_vector_repository() -> VectorRepository:
     return VectorRepository()
@@ -36,6 +37,29 @@ def get_chunk_repository(
     db: Session = Depends(get_db),
 ):
     return ChunkRepository(db)
+
+
+def get_retrieval_service(
+    embedding_service: EmbeddingService = Depends(
+        get_embedding_service
+    ),
+    vector_repository: VectorRepository = Depends(
+        get_vector_repository
+    ),
+    chunk_repository: ChunkRepository = Depends(
+        get_chunk_repository
+    ),
+    article_repository: ArticleRepository = Depends(
+        get_article_repository
+    ),
+) -> RetrievalService:
+
+    return RetrievalService(
+        embedding_service,
+        vector_repository,
+        chunk_repository,
+        article_repository,
+    )
 
 
 def get_ingestion_service(
