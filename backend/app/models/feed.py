@@ -18,5 +18,5 @@ class Feed(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=datetime.now(),
+        default=datetime.now,
     )
