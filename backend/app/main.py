@@ -5,6 +5,7 @@ from app.api.routers.feeds import router as feed_router
 from app.api.routers.embeddings import router as embedding_router
 from app.api.routers.vectors import router as vector_router
 from app.api.routers.retrievals import router as retrieval_router
+from app.api.routers.chat import router as chat_router
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -33,6 +34,7 @@ app.include_router(feed_router)
 app.include_router(embedding_router)
 app.include_router(vector_router)
 app.include_router(retrieval_router)
+app.include_router(chat_router)
 
 @app.exception_handler(ArticleAlreadyExists)
 async def article_exists_handler(

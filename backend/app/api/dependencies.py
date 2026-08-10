@@ -20,12 +20,22 @@ from app.services.embedding_service import EmbeddingService
 from app.repositories.vector_repository import VectorRepository
 from app.services.text_cleaning_service import TextCleaningService
 from app.services.retrieval_service import RetrievalService
+from app.services.llm_service import LLMService
+from app.services.prompt_builder_service import PromptBuilderService
+from app.services.chat_service import ChatService
 
 def get_vector_repository() -> VectorRepository:
     return VectorRepository()
 
 def get_embedding_service() -> EmbeddingService:
     return EmbeddingService()
+
+def get_llm_service() -> LLMService:
+    return LLMService()
+
+
+def get_prompt_builder() -> PromptBuilderService:
+    return PromptBuilderService()
 
 def get_article_repository(
     db: Session = Depends(get_db),
@@ -59,6 +69,25 @@ def get_retrieval_service(
         vector_repository,
         chunk_repository,
         article_repository,
+    )
+
+
+def get_chat_service(
+    retrieval_service: RetrievalService = Depends(
+        get_retrieval_service
+    ),
+    prompt_builder: PromptBuilderService = Depends(
+        get_prompt_builder
+    ),
+    llm_service: LLMService = Depends(
+        get_llm_service
+    ),
+) -> ChatService:
+
+    return ChatService(
+        retrieval_service,
+        prompt_builder,
+        llm_service,
     )
 
 
