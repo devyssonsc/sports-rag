@@ -8,8 +8,6 @@ from app.services.article_service import ArticleService
 from app.repositories.feed_repository import FeedRepository
 from app.services.feed_service import FeedService
 
-from app.services.rss_service import RSSService
-
 from app.repositories.article_repository import ArticleRepository
 from app.services.ingestion_service import IngestionService
 from app.services.article_content_service import ArticleContentService
@@ -23,6 +21,7 @@ from app.services.retrieval_service import RetrievalService
 from app.services.llm_service import LLMService
 from app.services.prompt_builder_service import PromptBuilderService
 from app.services.chat_service import ChatService
+from app.services.discovery.factory import DiscoveryFactory
 
 def get_vector_repository() -> VectorRepository:
     return VectorRepository()
@@ -36,6 +35,10 @@ def get_llm_service() -> LLMService:
 
 def get_prompt_builder() -> PromptBuilderService:
     return PromptBuilderService()
+
+
+def get_discovery_factory() -> DiscoveryFactory:
+    return DiscoveryFactory()
 
 def get_article_repository(
     db: Session = Depends(get_db),
@@ -118,9 +121,6 @@ def get_ingestion_service(
         vector_repository,
     )
 
-
-def get_rss_service():
-    return RSSService()
 
 def get_article_service(
     db: Session = Depends(get_db),

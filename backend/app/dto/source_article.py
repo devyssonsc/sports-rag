@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class RSSArticle:
+class SourceArticle:
     title: str
     url: str
     summary: str | None

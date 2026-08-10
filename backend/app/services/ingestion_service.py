@@ -1,5 +1,5 @@
 from app.repositories.article_repository import ArticleRepository
-from app.dto.rss_article import RSSArticle
+from app.dto.source_article import SourceArticle
 from app.models.article import Article
 
 from app.schemas.ingestion import IngestionResult
@@ -30,7 +30,7 @@ class IngestionService:
     def ingest(
         self,
         feed: Feed,
-        articles: list[RSSArticle],
+        articles: list[SourceArticle],
     ) -> IngestionResult:
         
         processed = len(articles)

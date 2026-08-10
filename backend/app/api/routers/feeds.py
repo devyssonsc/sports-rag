@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends
 
 from app.schemas.feed import FeedCreate, FeedResponse
 from app.services.feed_service import FeedService
-from app.api.dependencies import get_feed_service, get_ingestion_service, get_rss_service
+from app.api.dependencies import get_feed_service, get_ingestion_service, get_discovery_factory
 import logging
 
-from app.services.rss_service import RSSService
+from app.services.discovery.factory import DiscoveryFactory
 
 from app.schemas.ingestion import IngestionResult
 from app.services.ingestion_service import IngestionService
@@ -33,12 +33,14 @@ def list_feeds(
 def fetch_feed(
     feed_id: int,
     feed_service: FeedService = Depends(get_feed_service),
-    rss_service: RSSService = Depends(get_rss_service),
+    discovery_factory: DiscoveryFactory = Depends(get_discovery_factory),
     ingestion_service: IngestionService = Depends(get_ingestion_service)
 ):
 
     feed = feed_service.get(feed_id)
 
-    articles = rss_service.parse(feed.url)
+    strategy = discovery_factory.get(feed)
+
+    articles = strategy.discover(feed)
     
     return ingestion_service.ingest(feed, articles)
