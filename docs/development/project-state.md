@@ -42,20 +42,32 @@ Current layers:
 
 Status: ðŸŸ¡ In Progress
 
+The Feed domain has been fully replaced by NewsSource across all layers
+(models, schemas, repositories, services, routers, dependencies and the
+database migration). This transition was concluded in commit c80a6e3.
+
+The multi-source discovery architecture is prepared to receive new
+strategies without changing the rest of the pipeline.
+
 Implemented
 
+- Feed fully replaced by NewsSource across all layers
 - NewsSource registration
 - NewsSource listing
 - NewsSource fetching
-- SourceType support
-- DiscoveryFactory
-- RSSDiscovery
-- Rejection of CRAWL sources until CrawlDiscovery exists
+- SourceType with RSS and CRAWL values
+- DiscoveryFactory selects the discovery strategy based on SourceType
+- RSSDiscovery implements RSS discovery (currently the only functional strategy)
+- SourceArticle as the common DTO produced by every discovery strategy
+- IngestionService independent from the discovery origin (consumes SourceArticle)
+- CRAWL kept as architectural preparation; creating a CRAWL NewsSource is rejected until CrawlDiscovery exists
 
 Pending
 
-- CrawlDiscovery
+- CrawlDiscovery (Crawl4AI not yet implemented)
 - Additional discovery strategies
+- Date normalization
+- Metadata normalization
 
 ---
 

@@ -182,6 +182,8 @@ Known but not yet functional source types:
 
 - CRAWL
 
+SourceType currently defines RSS and CRAWL. RSS is the only functional strategy. CRAWL exists as architectural preparation for a future CrawlDiscovery; until that strategy exists, creating a NewsSource with SourceType.CRAWL is rejected at creation time.
+
 Planned implementations:
 
 - CrawlDiscovery
