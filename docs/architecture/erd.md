@@ -29,6 +29,7 @@ The PostgreSQL database stores the application state, while Qdrant stores vector
                     │ name                     │
                     │ url (unique)             │
                     │ type (source_type enum)  │
+                    │ article_url_pattern      │
                     │ last_fetched_at (null)   │
                     │ created_at               │
                     └────────────┬─────────────┘
@@ -76,7 +77,7 @@ The PostgreSQL database stores the application state, while Qdrant stores vector
                      └─────────────────────────┘
 ```
 
-The `source_type` enum currently accepts `RSS` and `CRAWL`. Only `RSS` is functional; `CRAWL` sources are rejected at creation until a Crawl discovery strategy exists.
+The `source_type` enum currently accepts `RSS`, `CRAWL` and `SITEMAP`, all functional. `CRAWL` sources set `article_url_pattern` (a regex, required at creation) to select article links from a server-rendered HTML listing page. `SITEMAP` sources read an XML sitemap (`article_url_pattern` optional). JavaScript-rendered sites are deferred to a future browser-based source type.
 
 ---
 

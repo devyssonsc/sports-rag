@@ -60,7 +60,10 @@ EmbeddingService
 
 The selected `DiscoveryStrategy` discovers available articles from a `NewsSource`.
 
-At the current stage, only `SourceType.RSS` is functional. `SourceType.CRAWL` exists in the domain model but is rejected during source creation until `CrawlDiscovery` is implemented.
+`SourceType.RSS`, `SourceType.CRAWL` and `SourceType.SITEMAP` are functional. RSS uses `RSSDiscovery` (feedparser); CRAWL uses `HtmlDiscovery`, which fetches a server-rendered listing page over plain HTTP and selects article links via a per-source regex (`article_url_pattern`); SITEMAP uses `SitemapDiscovery`, which reads an XML sitemap (including Google News sitemaps, from which it also fills `published_at`). JavaScript-rendered sites are deferred to a future browser-based strategy.
+
+If the source cannot be fetched or parsed (network error, HTTP error, malformed
+document), discovery raises a domain error that the API surfaces as HTTP 502.
 
 Output:
 
@@ -77,6 +80,11 @@ For every discovered article:
 - download the page;
 - extract the main content;
 - return plain text.
+
+Articles whose extracted content is empty or too short (e.g. cookie-consent
+walls or JavaScript-only pages that the plain-HTTP extractor cannot read) are
+skipped and not persisted. A per-source `article_url_pattern` can filter such
+URLs earlier, before extraction.
 
 ---
 

@@ -33,9 +33,11 @@ Each discovery mechanism implements a common interface and produces the same out
 list[SourceArticle]
 ```
 
-Current implementation:
+Current implementations:
 
-- RSSDiscovery
+- RSSDiscovery (feedparser)
+- HtmlDiscovery (plain HTTP + HTML parsing)
+- SitemapDiscovery (XML sitemaps, including Google News sitemaps)
 
 Current source model:
 
@@ -44,20 +46,39 @@ Current source model:
 Current functional source types:
 
 - RSS
+- CRAWL (server-rendered HTML pages)
+- SITEMAP (XML sitemaps)
 
-Known but not yet functional source types:
+SITEMAP sources read an XML sitemap and build one article per `<loc>`. For
+Google News sitemaps, the title and publication date come directly from the
+`news:title` and `news:publication_date` fields, which also populates the
+article's `published_at`. `article_url_pattern` is optional for SITEMAP (a news
+sitemap is already a curated list); when provided it is applied as an extra
+filter.
 
-- CRAWL
+CRAWL sources discover articles by fetching a listing/section page with a plain
+HTTP GET (no browser) and keeping the links that match a per-source regular
+expression (`article_url_pattern`). This covers sites that render their content
+as normal HTML.
+
+Sites that expose their links only through JavaScript are intentionally out of
+scope for HtmlDiscovery. They will be handled by a future browser-based strategy
+(Crawl4AI) under a separate SourceType (e.g. CRAWL4AI), added only when such a
+source is actually needed — to avoid paying the browser/Chromium cost
+prematurely.
 
 Planned implementations:
 
-- CrawlDiscovery (Crawl4AI)
+- Crawl4AI-based discovery (browser, for JavaScript-rendered sites)
 - API-based discovery
 - Additional providers
 
-The correct strategy is selected through a DiscoveryFactory according to the configured SourceType on the NewsSource.
+The correct strategy is selected through a DiscoveryFactory according to the
+configured SourceType on the NewsSource.
 
-Until CrawlDiscovery exists, sources configured with SourceType.CRAWL are rejected during creation instead of being accepted and failing later during fetch.
+A CRAWL NewsSource requires a valid `article_url_pattern`. This is validated at
+creation time so that a misconfigured source is rejected up front instead of
+failing later during fetch.
 
 ---
 

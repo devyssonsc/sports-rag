@@ -184,23 +184,23 @@ Purpose:
 
 Discover new articles from a source.
 
-Current implementation:
+Current implementations:
 
-- RSSDiscovery
+- RSSDiscovery (feedparser)
+- HtmlDiscovery (plain HTTP + HTML parsing)
+- SitemapDiscovery (XML sitemaps, including Google News sitemaps)
 
 Current functional source types:
 
 - RSS
+- CRAWL (server-rendered HTML pages)
+- SITEMAP (XML sitemaps)
 
-Known but not yet functional source types:
-
-- CRAWL
-
-SourceType currently defines RSS and CRAWL. RSS is the only functional strategy. CRAWL exists as architectural preparation for a future CrawlDiscovery; until that strategy exists, creating a NewsSource with SourceType.CRAWL is rejected at creation time.
+SourceType currently defines RSS, CRAWL and SITEMAP, all functional. A CRAWL source fetches a listing page with a plain HTTP GET (no browser) and keeps the links matching a per-source regex (`article_url_pattern`), validated at creation. A SITEMAP source reads an XML sitemap and builds one article per `<loc>`; for Google News sitemaps it also fills the title and `published_at` from the `news:` fields. JavaScript-rendered sites are out of scope for HtmlDiscovery and will be served by a future browser-based strategy under a separate source type (e.g. CRAWL4AI).
 
 Planned implementations:
 
-- CrawlDiscovery
+- Crawl4AI-based discovery (browser, for JavaScript-rendered sites)
 - API-based discovery
 - Other discovery strategies
 

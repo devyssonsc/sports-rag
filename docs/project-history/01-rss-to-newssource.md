@@ -119,6 +119,12 @@ reescrito dentro de `c80a6e3`.
 
 # 4. Arquitetura atual
 
+> **Nota:** esta seção descreve o estado **imediatamente após** a transição
+> Feed → NewsSource. Depois disso a stack migrou para async (ver `ADR-006`) e
+> novas estratégias de descoberta foram adicionadas — `HtmlDiscovery` (CRAWL) e
+> `SitemapDiscovery` (SITEMAP). Para o estado corrente, ver
+> `docs/development/project-state.md` e `ADR-004`.
+
 ```text
 NewsSource (SourceType: RSS | CRAWL)
       │

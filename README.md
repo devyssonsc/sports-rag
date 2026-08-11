@@ -61,9 +61,9 @@ Contents:
 
 - project-state.md
 - roadmap.md
-- progress/
 
-The `progress/` directory contains chronological development logs.
+Chronological development logs live in the `progress-reports/` directory
+(one file per week).
 
 ---
 

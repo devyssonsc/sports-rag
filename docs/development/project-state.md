@@ -55,16 +55,21 @@ Implemented
 - NewsSource registration
 - NewsSource listing
 - NewsSource fetching
-- SourceType with RSS and CRAWL values
+- SourceType with RSS, CRAWL and SITEMAP values (all functional)
 - DiscoveryFactory selects the discovery strategy based on SourceType
-- RSSDiscovery implements RSS discovery (currently the only functional strategy)
+- RSSDiscovery implements RSS discovery
+- HtmlDiscovery implements CRAWL discovery for server-rendered HTML pages,
+  selecting article links via a per-source regex (article_url_pattern)
+- SitemapDiscovery implements SITEMAP discovery (XML / Google News sitemaps),
+  filling published_at from the sitemap when available
 - SourceArticle as the common DTO produced by every discovery strategy
 - IngestionService independent from the discovery origin (consumes SourceArticle)
-- CRAWL kept as architectural preparation; creating a CRAWL NewsSource is rejected until CrawlDiscovery exists
+- CRAWL sources require a valid article_url_pattern, validated at creation
 
 Pending
 
-- CrawlDiscovery (Crawl4AI not yet implemented)
+- Crawl4AI (browser-based) discovery for JavaScript-rendered sites
+  (planned as a separate CRAWL4AI source type)
 - Additional discovery strategies
 - Date normalization
 - Metadata normalization
@@ -211,22 +216,30 @@ See ADR-006 for the decision and rationale.
 - Together AI
 - LlamaIndex
 - Trafilatura
+- httpx
+- lxml
 
 ---
 
 # Current Technical Debt
 
-- Date normalization has not yet been implemented.
+- Date normalization is only partial: SITEMAP sources populate `published_at`
+  from the sitemap, but RSS and CRAWL sources still leave it null. There is no
+  cross-provider normalization yet.
 - Metadata normalization between different providers has not yet been implemented.
-- CrawlDiscovery is not yet available.
+- Crawl4AI (browser-based discovery for JavaScript-rendered sites) is not yet
+  implemented; HtmlDiscovery only handles server-rendered HTML.
+- Deleting an article removes its PostgreSQL rows but not its Qdrant vectors,
+  which can leave orphaned points.
 
 ---
 
 # Next Milestones
 
-1. Implement CrawlDiscovery.
-2. Integrate Crawl4AI.
-3. Normalize publication dates.
+1. Integrate Crawl4AI as a browser-based discovery strategy for
+   JavaScript-rendered sites (new CRAWL4AI source type).
+2. Add more news sources.
+3. Normalize publication dates across providers.
 4. Normalize metadata from different providers.
 
 ---
