@@ -456,10 +456,13 @@ O projeto atualmente possui:
 
 # 17. Próximos passos
 
+A refatoração da camada Discovery e a transição `Feed` → `NewsSource` foram
+**concluídas** (commit `c80a6e3`). Os detalhes técnicos dessa evolução, com o
+antes e depois de cada camada, estão registrados em `01-rss-to-newssource.md`.
+
 Os próximos objetivos previstos são:
 
-- finalizar a refatoração da camada Discovery;
-- integrar Crawl4AI;
+- integrar Crawl4AI (implementar `CrawlDiscovery`);
 - adicionar novas fontes de notícias;
 - normalizar datas;
 - normalizar metadados;
