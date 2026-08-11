@@ -62,6 +62,8 @@ The selected `DiscoveryStrategy` discovers available articles from a `NewsSource
 
 `SourceType.RSS`, `SourceType.CRAWL` and `SourceType.SITEMAP` are functional. RSS uses `RSSDiscovery` (feedparser); CRAWL uses `HtmlDiscovery`, which fetches a server-rendered listing page over plain HTTP and selects article links via a per-source regex (`article_url_pattern`); SITEMAP uses `SitemapDiscovery`, which reads an XML sitemap (including Google News sitemaps, from which it also fills `published_at`). JavaScript-rendered sites are deferred to a future browser-based strategy.
 
+Each strategy normalizes `published_at` to a timezone-aware UTC datetime (via `app.core.dates`), regardless of the source's original date format or timezone, so the field is stored consistently across providers.
+
 If the source cannot be fetched or parsed (network error, HTTP error, malformed
 document), discovery raises a domain error that the API surfaces as HTTP 502.
 
@@ -81,10 +83,19 @@ For every discovered article:
 - extract the main content;
 - return plain text.
 
+Before extraction, an article whose URL already exists in the database is
+**ignored** (not re-fetched and not updated). Article URLs are globally unique,
+so this covers both articles already ingested by an earlier fetch of any source
+and duplicates within the same batch — for example an RSS feed that lists the
+same item twice.
+
 Articles whose extracted content is empty or too short (e.g. cookie-consent
 walls or JavaScript-only pages that the plain-HTTP extractor cannot read) are
-skipped and not persisted. A per-source `article_url_pattern` can filter such
-URLs earlier, before extraction.
+**skipped** and not persisted. A per-source `article_url_pattern` can filter
+such URLs earlier, before extraction.
+
+The fetch response (`IngestionResult`) reports these outcomes as
+`processed` = `inserted` + `ignored` + `skipped`.
 
 ---
 

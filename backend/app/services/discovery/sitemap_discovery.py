@@ -6,6 +6,7 @@ import httpx
 
 from lxml import etree
 
+from app.core.dates import ensure_utc
 from app.core.exceptions import DiscoveryError
 from app.dto.source_article import SourceArticle
 from app.models.news_source import NewsSource
@@ -109,7 +110,7 @@ class SitemapDiscovery(DiscoveryStrategy):
             return None
 
         try:
-            return datetime.fromisoformat(value.strip())
+            return ensure_utc(datetime.fromisoformat(value.strip()))
         except ValueError:
             return None
 

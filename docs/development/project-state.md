@@ -223,9 +223,9 @@ See ADR-006 for the decision and rationale.
 
 # Current Technical Debt
 
-- Date normalization is only partial: SITEMAP sources populate `published_at`
-  from the sitemap, but RSS and CRAWL sources still leave it null. There is no
-  cross-provider normalization yet.
+- Publication dates are normalized to UTC for RSS and SITEMAP sources (via
+  `app.core.dates`). CRAWL (HtmlDiscovery) leaves `published_at` null because a
+  listing page carries no per-article date.
 - Metadata normalization between different providers has not yet been implemented.
 - Crawl4AI (browser-based discovery for JavaScript-rendered sites) is not yet
   implemented; HtmlDiscovery only handles server-rendered HTML.
@@ -239,8 +239,7 @@ See ADR-006 for the decision and rationale.
 1. Integrate Crawl4AI as a browser-based discovery strategy for
    JavaScript-rendered sites (new CRAWL4AI source type).
 2. Add more news sources.
-3. Normalize publication dates across providers.
-4. Normalize metadata from different providers.
+3. Normalize metadata from different providers.
 
 ---
 
