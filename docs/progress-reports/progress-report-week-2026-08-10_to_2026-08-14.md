@@ -41,7 +41,17 @@ e expandir a camada de descoberta de notícias para múltiplas fontes
     paredes de consentimento de cookies).
 -   Tratamento de erros de descoberta: rede/HTTP/XML inválido passam a retornar
     HTTP 502 (`DiscoveryError`) em vez de 500 genérico.
--   Testes acompanhando cada etapa (23 no total) e documentação atualizada.
+-   Normalização de `published_at` para UTC em todas as fontes (via
+    `app.core.dates`); o `feedparser` já entrega em UTC e um helper unifica RSS
+    e SITEMAP.
+-   Filtro de URL por fonte com inclusão/exclusão: prefixo `!` bloqueia (helper
+    compartilhado usado por `HtmlDiscovery` e `SitemapDiscovery`).
+-   Otimização de embeddings: chunks de um artigo embedados em lote (uma chamada
+    à Together por artigo, em vez de uma por chunk).
+-   Ingestão em background: `POST /news-sources/{id}/fetch` retorna `202` e roda
+    em segundo plano (FastAPI BackgroundTasks), gravando `last_fetched_at` e
+    logando o `IngestionResult`.
+-   Testes acompanhando cada etapa (38 no total) e documentação atualizada.
 
 ------------------------------------------------------------------------
 
@@ -53,9 +63,11 @@ e expandir a camada de descoberta de notícias para múltiplas fontes
 -   Stack assíncrona ponta a ponta (ADR-006).
 -   Descoberta multi-source: RSS, CRAWL (HTML) e SITEMAP, selecionadas pela
     `DiscoveryFactory`.
--   Filtro de URLs por fonte (`article_url_pattern`) e guard de conteúdo na
-    ingestão.
--   `published_at` preenchido a partir de sitemaps.
+-   Filtro de URLs por fonte (`article_url_pattern`), com inclusão (padrão) e
+    exclusão (prefixo `!`), e guard de conteúdo na ingestão.
+-   `published_at` normalizado em UTC para RSS e SITEMAP.
+-   Embedding em lote por artigo.
+-   Ingestão em background (`/fetch` → `202`), gravando `last_fetched_at`.
 -   Pipeline RAG completo (ingestão → chunking → embeddings → retrieval → LLM).
 
 ## Próximos passos
@@ -63,5 +75,7 @@ e expandir a camada de descoberta de notícias para múltiplas fontes
 1.  Integrar Crawl4AI como estratégia baseada em navegador para sites
     renderizados por JavaScript (novo tipo CRAWL4AI).
 2.  Adicionar novas fontes de notícias.
-3.  Normalizar datas e metadados entre provedores.
-4.  Remover vetores órfãos no Qdrant ao apagar artigos.
+3.  Normalizar metadados entre provedores.
+4.  Evoluir a ingestão em background para fila/worker dedicado com retries e
+    agendamento periódico.
+5.  Remover vetores órfãos no Qdrant ao apagar artigos.

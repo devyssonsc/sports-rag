@@ -65,6 +65,9 @@ Implemented
 - SourceArticle as the common DTO produced by every discovery strategy
 - IngestionService independent from the discovery origin (consumes SourceArticle)
 - CRAWL sources require a valid article_url_pattern, validated at creation
+- Fetch triggers background ingestion (202 Accepted), then records
+  last_fetched_at and logs the IngestionResult
+- Article chunks are embedded in batched requests (one call per article)
 
 Pending
 
@@ -231,6 +234,8 @@ See ADR-006 for the decision and rationale.
   implemented; HtmlDiscovery only handles server-rendered HTML.
 - Deleting an article removes its PostgreSQL rows but not its Qdrant vectors,
   which can leave orphaned points.
+- Background ingestion runs in-process (FastAPI BackgroundTasks): no retries and
+  lost on restart. A task queue / worker and periodic scheduling are future work.
 
 ---
 

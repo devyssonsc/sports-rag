@@ -54,6 +54,17 @@ EmbeddingService
       └────────────► Qdrant
 ```
 
+## Execution
+
+`POST /news-sources/{id}/fetch` validates the source and then runs the pipeline
+below as a **background task**, returning `202 Accepted` immediately. When the
+task finishes it updates the source's `last_fetched_at` and logs an
+`IngestionResult` (`processed` / `inserted` / `ignored` / `skipped`).
+
+The background task runs in-process (FastAPI `BackgroundTasks`): simple and
+infra-free, but with no retries and lost on a restart. A dedicated task
+queue / worker (and periodic scheduling) is future work.
+
 ## Step-by-Step
 
 ### 1. Discovery
@@ -63,6 +74,8 @@ The selected `DiscoveryStrategy` discovers available articles from a `NewsSource
 `SourceType.RSS`, `SourceType.CRAWL` and `SourceType.SITEMAP` are functional. RSS uses `RSSDiscovery` (feedparser); CRAWL uses `HtmlDiscovery`, which fetches a server-rendered listing page over plain HTTP and selects article links via a per-source regex (`article_url_pattern`); SITEMAP uses `SitemapDiscovery`, which reads an XML sitemap (including Google News sitemaps, from which it also fills `published_at`). JavaScript-rendered sites are deferred to a future browser-based strategy.
 
 Each strategy normalizes `published_at` to a timezone-aware UTC datetime (via `app.core.dates`), regardless of the source's original date format or timezone, so the field is stored consistently across providers.
+
+`article_url_pattern` is an include filter by default (keep URLs matching the regex); prefix it with `!` to exclude instead (keep URLs that do not match), e.g. `!/betting/`.
 
 If the source cannot be fetched or parsed (network error, HTTP error, malformed
 document), discovery raises a domain error that the API surfaces as HTTP 502.
@@ -94,8 +107,9 @@ walls or JavaScript-only pages that the plain-HTTP extractor cannot read) are
 **skipped** and not persisted. A per-source `article_url_pattern` can filter
 such URLs earlier, before extraction.
 
-The fetch response (`IngestionResult`) reports these outcomes as
-`processed` = `inserted` + `ignored` + `skipped`.
+The ingestion run reports these outcomes as an `IngestionResult`
+(`processed` = `inserted` + `ignored` + `skipped`), logged when the background
+task finishes (see Execution above).
 
 ---
 
@@ -121,7 +135,9 @@ Each chunk is stored in PostgreSQL.
 
 ### 5. Embedding Generation
 
-An embedding is generated for every chunk.
+An embedding is generated for every chunk. All chunks of an article are embedded
+in a single batched request to the embeddings API (split into groups when the
+count is large), rather than one request per chunk.
 
 ---
 

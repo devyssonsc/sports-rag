@@ -56,6 +56,12 @@ article's `published_at`. `article_url_pattern` is optional for SITEMAP (a news
 sitemap is already a curated list); when provided it is applied as an extra
 filter.
 
+`article_url_pattern` is an **include** filter by default (keep URLs that match
+the regex). Prefixing the pattern with `!` turns it into an **exclude** filter
+(keep URLs that do *not* match) — e.g. `!/betting/` drops betting URLs while
+keeping everything else. This is shared by all URL-filtering strategies
+(HtmlDiscovery, SitemapDiscovery).
+
 CRAWL sources discover articles by fetching a listing/section page with a plain
 HTTP GET (no browser) and keeping the links that match a per-source regular
 expression (`article_url_pattern`). This covers sites that render their content
