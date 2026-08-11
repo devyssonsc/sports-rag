@@ -13,6 +13,13 @@ from app.repositories.vector_repository import VectorRepository
 
 class IngestionService:
 
+    # Minimum length (characters) of extracted content for an article to be
+    # ingested. Guards against extractions that returned nothing usable, e.g.
+    # cookie-consent walls or JavaScript-rendered pages where the plain-HTTP
+    # extractor only captured boilerplate. Pair with a per-source
+    # article_url_pattern for finer control.
+    MIN_CONTENT_LENGTH = 500
+
     def __init__(
         self,
         article_repository: ArticleRepository,
@@ -36,6 +43,7 @@ class IngestionService:
         processed = len(articles)
         inserted = 0
         ignored = 0
+        skipped = 0
 
         for source_article in articles:
 
@@ -50,6 +58,10 @@ class IngestionService:
             content = await self.article_content_service.extract(
                                 source_article.url
                             )
+
+            if not self._is_ingestible(content):
+                skipped += 1
+                continue
 
             article = Article(
                 title=source_article.title,
@@ -83,4 +95,11 @@ class IngestionService:
             processed=processed,
             inserted=inserted,
             ignored=ignored,
+            skipped=skipped,
         )
+
+    def _is_ingestible(self, content: str | None) -> bool:
+        if content is None:
+            return False
+
+        return len(content.strip()) >= self.MIN_CONTENT_LENGTH
