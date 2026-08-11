@@ -26,3 +26,8 @@ class NewsSourceNotFound(ResourceNotFound):
 
 class UnsupportedNewsSourceType(DomainException):
     pass
+
+
+class DiscoveryError(DomainException):
+    """Raised when a discovery strategy fails to fetch or parse a source."""
+    pass

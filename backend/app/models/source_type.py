@@ -5,3 +5,5 @@ class SourceType(str, Enum):
     RSS = "RSS"
 
     CRAWL = "CRAWL"
+
+    SITEMAP = "SITEMAP"

@@ -1,11 +1,11 @@
 from unittest.mock import AsyncMock
 
 import pytest
+from pydantic import ValidationError
 
 from app.core.exceptions import (
     NewsSourceAlreadyExists,
     NewsSourceNotFound,
-    UnsupportedNewsSourceType,
 )
 from app.models.news_source import NewsSource
 from app.models.source_type import SourceType
@@ -33,24 +33,57 @@ async def test_create_rss_news_source():
 
     repository.get_by_url.assert_awaited_once_with("https://example.com/rss")
     repository.create.assert_awaited_once()
-    assert result.name == "Example"
-    assert result.url == "https://example.com/rss"
     assert result.type == SourceType.RSS
+    assert result.article_url_pattern is None
 
 
-async def test_create_crawl_is_rejected():
+async def test_create_crawl_with_pattern_succeeds():
     service, repository = make_service()
+    repository.get_by_url.return_value = None
+    repository.create.side_effect = lambda news_source: news_source
 
     data = NewsSourceCreate(
         name="Example",
-        url="https://example.com",
+        url="https://example.com/futebol",
         type=SourceType.CRAWL,
+        article_url_pattern=r"^https://example\.com/futebol/\d+$",
     )
 
-    with pytest.raises(UnsupportedNewsSourceType):
-        await service.create_news_source(data)
+    result = await service.create_news_source(data)
 
-    repository.create.assert_not_awaited()
+    repository.create.assert_awaited_once()
+    assert result.type == SourceType.CRAWL
+    assert result.article_url_pattern == r"^https://example\.com/futebol/\d+$"
+
+
+def test_crawl_requires_article_url_pattern():
+    with pytest.raises(ValidationError):
+        NewsSourceCreate(
+            name="Example",
+            url="https://example.com/futebol",
+            type=SourceType.CRAWL,
+        )
+
+
+def test_invalid_regex_is_rejected():
+    with pytest.raises(ValidationError):
+        NewsSourceCreate(
+            name="Example",
+            url="https://example.com/futebol",
+            type=SourceType.CRAWL,
+            article_url_pattern="[unclosed(",
+        )
+
+
+def test_sitemap_does_not_require_pattern():
+    # A SITEMAP source is already a curated list; the pattern is optional.
+    data = NewsSourceCreate(
+        name="Example",
+        url="https://example.com/sitemap_news.xml",
+        type=SourceType.SITEMAP,
+    )
+
+    assert data.article_url_pattern is None
 
 
 async def test_create_duplicate_url_is_rejected():

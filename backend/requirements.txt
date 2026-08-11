@@ -9,6 +9,8 @@ psycopg[binary]
 
 feedparser
 trafilatura
+httpx
+lxml
 together
 
 llama-index-core

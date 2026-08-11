@@ -3,10 +3,8 @@ import logging
 from app.core.exceptions import (
     NewsSourceAlreadyExists,
     NewsSourceNotFound,
-    UnsupportedNewsSourceType,
 )
 from app.models.news_source import NewsSource
-from app.models.source_type import SourceType
 from app.repositories.news_source_repository import NewsSourceRepository
 from app.schemas.news_source import NewsSourceCreate
 
@@ -22,11 +20,6 @@ class NewsSourceService:
         self,
         news_source_data: NewsSourceCreate,
     ) -> NewsSource:
-        if news_source_data.type != SourceType.RSS:
-            raise UnsupportedNewsSourceType(
-                f"NewsSource type '{news_source_data.type}' is not supported yet."
-            )
-
         existing_news_source = await self.repository.get_by_url(
             news_source_data.url
         )
@@ -40,6 +33,7 @@ class NewsSourceService:
             name=news_source_data.name,
             url=news_source_data.url,
             type=news_source_data.type,
+            article_url_pattern=news_source_data.article_url_pattern,
         )
 
         logger.info("Creating news source: %s", news_source.url)

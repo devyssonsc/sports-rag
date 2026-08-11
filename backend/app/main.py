@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from app.core.exceptions import (
     ArticleAlreadyExists,
     ArticleNotFound,
+    DiscoveryError,
     NewsSourceAlreadyExists,
     NewsSourceNotFound,
     UnsupportedNewsSourceType,
@@ -94,6 +95,18 @@ async def unsupported_news_source_type_handler(
 ):
     return JSONResponse(
         status_code=400,
+        content={
+            "detail": str(exc)
+        },
+    )
+
+@app.exception_handler(DiscoveryError)
+async def discovery_error_handler(
+    request: Request,
+    exc: DiscoveryError,
+):
+    return JSONResponse(
+        status_code=502,
         content={
             "detail": str(exc)
         },

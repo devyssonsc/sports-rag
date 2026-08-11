@@ -17,6 +17,10 @@ class NewsSource(Base):
         Enum(SourceType, name="source_type"),
         nullable=False,
     )
+    article_url_pattern: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
     last_fetched_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=True,
