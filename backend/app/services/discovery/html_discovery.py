@@ -1,5 +1,3 @@
-import re
-
 from urllib.parse import urljoin
 
 import httpx
@@ -8,6 +6,7 @@ from lxml import etree
 from lxml import html as lxml_html
 
 from app.core.exceptions import DiscoveryError
+from app.core.url_filter import compile_url_filter
 from app.dto.source_article import SourceArticle
 from app.models.news_source import NewsSource
 from app.services.discovery.base import DiscoveryStrategy
@@ -31,7 +30,7 @@ class HtmlDiscovery(DiscoveryStrategy):
         news_source: NewsSource,
     ) -> list[SourceArticle]:
 
-        pattern = re.compile(news_source.article_url_pattern)
+        keep = compile_url_filter(news_source.article_url_pattern)
 
         try:
             base_url, html_text = await self._fetch_html(news_source.url)
@@ -54,7 +53,7 @@ class HtmlDiscovery(DiscoveryStrategy):
 
             absolute_url = urljoin(base_url, href)
 
-            if not pattern.search(absolute_url):
+            if not keep(absolute_url):
                 continue
 
             if absolute_url in seen:

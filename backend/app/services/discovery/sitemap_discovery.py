@@ -1,5 +1,3 @@
-import re
-
 from datetime import datetime
 
 import httpx
@@ -8,6 +6,7 @@ from lxml import etree
 
 from app.core.dates import ensure_utc
 from app.core.exceptions import DiscoveryError
+from app.core.url_filter import compile_url_filter
 from app.dto.source_article import SourceArticle
 from app.models.news_source import NewsSource
 from app.services.discovery.base import DiscoveryStrategy
@@ -22,7 +21,8 @@ class SitemapDiscovery(DiscoveryStrategy):
     ``news:publication_date`` (falling back to ``<lastmod>`` for the date).
 
     ``article_url_pattern`` is optional here: a news sitemap is already a curated
-    list of article URLs. When provided, it is applied as an extra filter.
+    list of article URLs. When provided, it is applied as an extra filter
+    (include by default, or exclude with a leading ``!``).
 
     Sitemap-index files (``<sitemapindex>``) are not followed yet.
     """
@@ -53,9 +53,7 @@ class SitemapDiscovery(DiscoveryStrategy):
 
         ns = {"sm": self.SITEMAP_NS, "news": self.NEWS_NS}
 
-        pattern = None
-        if news_source.article_url_pattern:
-            pattern = re.compile(news_source.article_url_pattern)
+        keep = compile_url_filter(news_source.article_url_pattern)
 
         articles = []
         seen = set()
@@ -67,7 +65,7 @@ class SitemapDiscovery(DiscoveryStrategy):
             if not loc or loc in seen:
                 continue
 
-            if pattern and not pattern.search(loc):
+            if not keep(loc):
                 continue
 
             seen.add(loc)

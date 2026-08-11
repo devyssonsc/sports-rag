@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
+from app.core.url_filter import validate_url_pattern
 from app.models.source_type import SourceType
 
 
@@ -18,7 +19,7 @@ class NewsSourceCreate(BaseModel):
     def _validate_regex(cls, value: str | None) -> str | None:
         if value is not None:
             try:
-                re.compile(value)
+                validate_url_pattern(value)
             except re.error as exc:
                 raise ValueError(
                     f"Invalid regex for article_url_pattern: {exc}"

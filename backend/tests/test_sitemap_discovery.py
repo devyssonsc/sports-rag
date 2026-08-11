@@ -81,6 +81,17 @@ async def test_sitemap_falls_back_to_source_name_and_lastmod():
     )
 
 
+async def test_sitemap_exclude_pattern_drops_matches():
+    discovery = SitemapDiscovery()
+    discovery._fetch = AsyncMock(return_value=SAMPLE)
+
+    # "!/other/" keeps everything except URLs containing /other/
+    articles = await discovery.discover(make_source(pattern=r"!/other/"))
+
+    assert len(articles) == 1
+    assert articles[0].url.endswith("article-a")
+
+
 async def test_sitemap_raises_discovery_error_on_fetch_failure():
     discovery = SitemapDiscovery()
     discovery._fetch = AsyncMock(side_effect=httpx.ConnectError("boom"))
