@@ -1,6 +1,6 @@
 import os
 
-from together import Together
+from together import AsyncTogether
 
 
 class LLMService:
@@ -9,16 +9,16 @@ class LLMService:
 
     def __init__(self):
 
-        self.client = Together(
+        self.client = AsyncTogether(
             api_key=os.getenv("TOGETHER_API_KEY")
         )
 
-    def generate(
+    async def generate(
         self,
         prompt: str,
     ) -> str:
 
-        response = self.client.chat.completions.create(
+        response = await self.client.chat.completions.create(
             model=self.MODEL_NAME,
             messages=[
                 {

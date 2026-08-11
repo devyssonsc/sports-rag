@@ -24,18 +24,18 @@ class ArticleService:
     ):
         self.article_repository = article_repository
         self.chunk_repository = chunk_repository
-        
-    def get_chunks(
+
+    async def get_chunks(
         self,
         article_id: int,
     ) -> ArticleChunksResponse:
 
-        article = self.article_repository.get_by_id(article_id)
+        article = await self.article_repository.get_by_id(article_id)
 
         if article is None:
             raise ValueError("Article not found")
 
-        chunks = self.chunk_repository.get_by_article_id(article_id)
+        chunks = await self.chunk_repository.get_by_article_id(article_id)
 
         return ArticleChunksResponse(
             article_id=article.id,
@@ -53,8 +53,8 @@ class ArticleService:
             ],
         )
 
-    def create_article(self, article_data: ArticleCreate) -> Article:
-        existing_article = self.article_repository.get_by_url(article_data.url)
+    async def create_article(self, article_data: ArticleCreate) -> Article:
+        existing_article = await self.article_repository.get_by_url(article_data.url)
 
         if existing_article:
             raise ArticleAlreadyExists(
@@ -67,32 +67,32 @@ class ArticleService:
             source=article_data.source,
             published_at=article_data.published_at,
         )
-        
+
         logger.info("Creating Article")
 
-        return self.article_repository.create(article)
+        return await self.article_repository.create(article)
 
-    def list_articles(self) -> list[Article]:
-        return self.article_repository.list()
+    async def list_articles(self) -> list[Article]:
+        return await self.article_repository.list()
 
-    def get_article(self, article_id: int) -> Article | None:
-        return self.article_repository.get_by_id(article_id)
+    async def get_article(self, article_id: int) -> Article | None:
+        return await self.article_repository.get_by_id(article_id)
 
-    def delete_article(self, article_id: int) -> None:
-        article = self.article_repository.get_by_id(article_id)
+    async def delete_article(self, article_id: int) -> None:
+        article = await self.article_repository.get_by_id(article_id)
 
         raise ArticleNotFound(
             f"Article {article_id} not found."
         )
 
-        self.article_repository.delete(article)
-        
-    def get_raw_article(
+        await self.article_repository.delete(article)
+
+    async def get_raw_article(
         self,
         article_id: int,
     ):
 
-        article = self.article_repository.get_by_id(article_id)
+        article = await self.article_repository.get_by_id(article_id)
 
         if article is None:
             return None

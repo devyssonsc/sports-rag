@@ -21,12 +21,12 @@ class ChatService:
         self.prompt_builder = prompt_builder
         self.llm_service = llm_service
 
-    def chat(
+    async def chat(
         self,
         question: str,
     ) -> ChatResponse:
 
-        chunks = self.retrieval_service.retrieve_context(
+        chunks = await self.retrieval_service.retrieve_context(
             question
         )
 
@@ -35,7 +35,7 @@ class ChatService:
             chunks,
         )
 
-        answer = self.llm_service.generate(
+        answer = await self.llm_service.generate(
             prompt
         )
 

@@ -27,25 +27,27 @@ class IngestionService:
         self.embedding_service = embedding_service
         self.vector_repository = vector_repository
 
-    def ingest(
+    async def ingest(
         self,
         news_source: NewsSource,
         articles: list[SourceArticle],
     ) -> IngestionResult:
-        
+
         processed = len(articles)
         inserted = 0
         ignored = 0
 
         for source_article in articles:
 
-            existing = self.article_repository.get_by_url(source_article.url)
+            existing = await self.article_repository.get_by_url(
+                source_article.url
+            )
 
             if existing:
                 ignored += 1
                 continue
-            
-            content = self.article_content_service.extract(
+
+            content = await self.article_content_service.extract(
                                 source_article.url
                             )
 
@@ -59,24 +61,24 @@ class IngestionService:
                 news_source_id=news_source.id
             )
 
-            article = self.article_repository.create(article)
+            article = await self.article_repository.create(article)
 
-            chunks = self.chunk_service.create_chunks(article)
+            chunks = await self.chunk_service.create_chunks(article)
 
             for chunk in chunks:
 
-                embedding = self.embedding_service.embed_document(
+                embedding = await self.embedding_service.embed_document(
                     chunk.content
                 )
 
-                self.vector_repository.upsert_chunk_embedding(
+                await self.vector_repository.upsert_chunk_embedding(
                     chunk_id=chunk.id,
                     article_id=chunk.article_id,
                     embedding=embedding,
                 )
 
             inserted += 1
-            
+
         return IngestionResult(
             processed=processed,
             inserted=inserted,

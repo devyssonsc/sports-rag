@@ -1,42 +1,43 @@
+from __future__ import annotations
+
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.article import Article
 
 
 class ArticleRepository:
-    def __init__(self, db: Session):
+    def __init__(self, db: AsyncSession):
         self.db = db
 
-    def create(self, article: Article) -> Article:
+    async def create(self, article: Article) -> Article:
         self.db.add(article)
-        self.db.commit()
-        self.db.refresh(article)
+        await self.db.commit()
+        await self.db.refresh(article)
         return article
 
-    def get_by_id(self, article_id: int) -> Article | None:
+    async def get_by_id(self, article_id: int) -> Article | None:
         statement = select(Article).where(Article.id == article_id)
-        return self.db.scalar(statement)
+        return await self.db.scalar(statement)
 
-    def get_by_url(self, url: str) -> Article | None:
+    async def get_by_url(self, url: str) -> Article | None:
         statement = select(Article).where(Article.url == url)
-        return self.db.scalar(statement)
+        return await self.db.scalar(statement)
 
-    def list(self) -> list[Article]:
+    async def list(self) -> list[Article]:
         statement = select(Article)
-        return list(self.db.scalars(statement).all())
-    
-    def get_by_ids(
+        result = await self.db.scalars(statement)
+        return list(result.all())
+
+    async def get_by_ids(
         self,
         article_ids: list[int],
     ) -> list[Article]:
 
-        return (
-            self.db.query(Article)
-            .filter(Article.id.in_(article_ids))
-            .all()
-        )
+        statement = select(Article).where(Article.id.in_(article_ids))
+        result = await self.db.scalars(statement)
+        return list(result.all())
 
-    def delete(self, article: Article) -> None:
-        self.db.delete(article)
-        self.db.commit()
+    async def delete(self, article: Article) -> None:
+        await self.db.delete(article)
+        await self.db.commit()

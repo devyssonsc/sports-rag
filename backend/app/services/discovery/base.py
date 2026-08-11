@@ -7,7 +7,7 @@ from app.models.news_source import NewsSource
 class DiscoveryStrategy(ABC):
 
     @abstractmethod
-    def discover(
+    async def discover(
         self,
         news_source: NewsSource,
     ) -> list[SourceArticle]:

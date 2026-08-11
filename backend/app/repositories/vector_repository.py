@@ -1,6 +1,6 @@
 import os
 
-from qdrant_client import QdrantClient
+from qdrant_client import AsyncQdrantClient
 
 from qdrant_client.models import PointStruct
 
@@ -15,24 +15,26 @@ class VectorRepository:
 
     def __init__(self):
 
-        self.client = QdrantClient(
+        self.client = AsyncQdrantClient(
             host=os.getenv("QDRANT_HOST", "qdrant"),
             port=int(os.getenv("QDRANT_PORT", 6333)),
         )
-        
-        self._ensure_collection_exists()
 
-    def get_collections(self):
-        return self.client.get_collections()
-    
-    def upsert_chunk_embedding(
+        self._collection_ready = False
+
+    async def get_collections(self):
+        return await self.client.get_collections()
+
+    async def upsert_chunk_embedding(
         self,
         chunk_id: int,
         article_id: int,
         embedding: list[float],
     ) -> None:
 
-        self.client.upsert(
+        await self._ensure_collection_exists()
+
+        await self.client.upsert(
             collection_name=self.COLLECTION_NAME,
             wait=True,
             points=[
@@ -45,28 +47,35 @@ class VectorRepository:
                 )
             ],
         )
-        
-    def _ensure_collection_exists(self) -> None:
+
+    async def _ensure_collection_exists(self) -> None:
+        if self._collection_ready:
+            return
+
         try:
-            self.client.get_collection(self.COLLECTION_NAME)
+            await self.client.get_collection(self.COLLECTION_NAME)
 
         except UnexpectedResponse:
 
-            self.client.create_collection(
+            await self.client.create_collection(
                 collection_name=self.COLLECTION_NAME,
                 vectors_config=VectorParams(
                     size=self.VECTOR_SIZE,
                     distance=Distance.COSINE,
                 ),
             )
-            
-    def search(
+
+        self._collection_ready = True
+
+    async def search(
         self,
         embedding: list[float],
         limit: int = 5,
     ):
 
-        results = self.client.query_points(
+        await self._ensure_collection_exists()
+
+        results = await self.client.query_points(
             collection_name=self.COLLECTION_NAME,
             query=embedding,
             limit=limit,

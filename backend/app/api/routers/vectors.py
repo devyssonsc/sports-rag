@@ -13,11 +13,11 @@ router = APIRouter(
 
 
 @router.get("/collections")
-def list_collections(
+async def list_collections(
     repository: VectorRepository = Depends(get_vector_repository),
 ):
 
-    collections = repository.get_collections()
+    collections = await repository.get_collections()
 
     return {
         "collections": [
@@ -27,18 +27,18 @@ def list_collections(
             for collection in collections.collections
         ]
     }
-    
+
 @router.post("/test")
-def test_vector(
+async def test_vector(
     embedding_service: EmbeddingService = Depends(get_embedding_service),
     repository: VectorRepository = Depends(get_vector_repository),
 ):
 
     text = "Lionel Messi scored two goals against Brazil."
 
-    embedding = embedding_service.embed_document(text)
+    embedding = await embedding_service.embed_document(text)
 
-    repository.upsert_chunk_embedding(
+    await repository.upsert_chunk_embedding(
         chunk_id=1,
         article_id=1,
         embedding=embedding,

@@ -26,23 +26,23 @@ router = APIRouter(
 
 
 @router.post("", response_model=NewsSourceResponse)
-def create_news_source(
+async def create_news_source(
     news_source: NewsSourceCreate,
     service: NewsSourceService = Depends(get_news_source_service),
 ):
     logger.info(news_source)
-    return service.create_news_source(news_source)
+    return await service.create_news_source(news_source)
 
 
 @router.get("", response_model=list[NewsSourceResponse])
-def list_news_sources(
+async def list_news_sources(
     service: NewsSourceService = Depends(get_news_source_service),
 ):
-    return service.list_news_sources()
+    return await service.list_news_sources()
 
 
 @router.post("/{news_source_id}/fetch", response_model=IngestionResult)
-def fetch_news_source(
+async def fetch_news_source(
     news_source_id: int,
     news_source_service: NewsSourceService = Depends(
         get_news_source_service
@@ -50,10 +50,10 @@ def fetch_news_source(
     discovery_factory: DiscoveryFactory = Depends(get_discovery_factory),
     ingestion_service: IngestionService = Depends(get_ingestion_service),
 ):
-    news_source = news_source_service.get(news_source_id)
+    news_source = await news_source_service.get(news_source_id)
 
     strategy = discovery_factory.get(news_source)
 
-    articles = strategy.discover(news_source)
+    articles = await strategy.discover(news_source)
 
-    return ingestion_service.ingest(news_source, articles)
+    return await ingestion_service.ingest(news_source, articles)

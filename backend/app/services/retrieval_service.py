@@ -23,13 +23,13 @@ class RetrievalService:
         self.chunk_repository = chunk_repository
         self.article_repository = article_repository
 
-    def search(
+    async def search(
         self,
         query: str,
         limit: int = 5,
     ) -> RetrievalResponse:
 
-        results = self.retrieve_context(
+        results = await self.retrieve_context(
             query,
             limit,
         )
@@ -38,16 +38,16 @@ class RetrievalService:
             query=query,
             results=results,
         )
-        
-    def retrieve_context(
+
+    async def retrieve_context(
         self,
         query: str,
         limit: int = 5,
     ) -> list[RetrievedChunk]:
 
-        embedding = self.embedding_service.embed_document(query)
+        embedding = await self.embedding_service.embed_document(query)
 
-        points = self.vector_repository.search(
+        points = await self.vector_repository.search(
             embedding,
             limit,
         )
@@ -57,7 +57,7 @@ class RetrievalService:
             for point in points
         ]
 
-        chunks = self.chunk_repository.get_by_ids(
+        chunks = await self.chunk_repository.get_by_ids(
             chunk_ids
         )
 
@@ -73,7 +73,7 @@ class RetrievalService:
             }
         )
 
-        articles = self.article_repository.get_by_ids(
+        articles = await self.article_repository.get_by_ids(
             article_ids
         )
 

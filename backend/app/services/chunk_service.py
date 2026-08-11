@@ -1,3 +1,5 @@
+import asyncio
+
 from app.models.article import Article
 from app.models.chunk import Chunk
 from app.repositories.chunk_repository import ChunkRepository
@@ -13,8 +15,8 @@ class ChunkService:
     ) -> None:
         self.chunking_service = chunking_service
         self.chunk_repository = chunk_repository
-        
-    def create_chunks(
+
+    async def create_chunks(
         self,
         article: Article,
     ) -> list[Chunk]:
@@ -22,7 +24,10 @@ class ChunkService:
         if article.content is None:
             return []
 
-        chunks = self.chunking_service.split(article.content)
+        chunks = await asyncio.to_thread(
+            self.chunking_service.split,
+            article.content,
+        )
 
         chunk_entities = []
 
@@ -36,6 +41,6 @@ class ChunkService:
 
             chunk_entities.append(chunk)
 
-        self.chunk_repository.create_many(chunk_entities)
-        
+        await self.chunk_repository.create_many(chunk_entities)
+
         return chunk_entities

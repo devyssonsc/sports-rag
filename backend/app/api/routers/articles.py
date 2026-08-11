@@ -20,32 +20,32 @@ router = APIRouter(prefix="/articles", tags=["Articles"])
     "/{article_id}/chunks",
     response_model=ArticleChunksResponse,
 )
-def get_article_chunks(
+async def get_article_chunks(
     article_id: int,
     article_service: ArticleService = Depends(get_article_service),
 ):
-    return article_service.get_chunks(article_id)
+    return await article_service.get_chunks(article_id)
 
 @router.post("", response_model=ArticleResponse)
-def create_article(
+async def create_article(
     article: ArticleCreate,
     service: ArticleService = Depends(get_article_service)
 ):
-    return service.create_article(article)
+    return await service.create_article(article)
 
 @router.get("", response_model=list[ArticleResponse])
-def list_articles(
+async def list_articles(
     service: ArticleService = Depends(get_article_service)
 ):
-    return service.list_articles()
+    return await service.list_articles()
 
-def get_article_chunks(
+async def get_article_chunks(
     article_id: int,
     article_repository: ArticleRepository = Depends(get_article_repository),
     chunk_repository: ChunkRepository = Depends(get_chunk_repository),
 ):
 
-    article = article_repository.get_by_id(article_id)
+    article = await article_repository.get_by_id(article_id)
 
     if article is None:
         raise HTTPException(
@@ -53,7 +53,7 @@ def get_article_chunks(
             detail="Article not found",
         )
 
-    chunks = chunk_repository.get_by_article_id(article_id)
+    chunks = await chunk_repository.get_by_article_id(article_id)
 
     return ArticleChunksResponse(
         article_id=article.id,
@@ -73,12 +73,12 @@ def get_article_chunks(
     "/{article_id}/raw",
     response_model=ArticleRawResponse,
 )
-def get_raw_article(
+async def get_raw_article(
     article_id: int,
     service: ArticleService = Depends(get_article_service),
 ):
 
-    article = service.get_raw_article(article_id)
+    article = await service.get_raw_article(article_id)
 
     if article is None:
         raise HTTPException(

@@ -17,12 +17,12 @@ router = APIRouter(
     "",
     response_model=EmbeddingResponse,
 )
-def test_embedding(
+async def test_embedding(
     request: EmbeddingRequest,
     embedding_service: EmbeddingService = Depends(get_embedding_service),
 ):
 
-    embedding = embedding_service.embed_document(request.text)
+    embedding = await embedding_service.embed_document(request.text)
 
     return EmbeddingResponse(
         model=embedding_service.MODEL_NAME,

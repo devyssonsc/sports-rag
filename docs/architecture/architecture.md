@@ -26,6 +26,20 @@ The main design principles are:
 
 ---
 
+# Execution Model
+
+The application runs on a fully asynchronous stack (see ADR-006):
+
+- FastAPI endpoints are asynchronous.
+- Database access uses SQLAlchemy `AsyncSession` over psycopg 3 (async).
+- Qdrant access uses `AsyncQdrantClient`.
+- Together AI (embeddings and generation) uses the async client.
+- Blocking libraries without an async API (Trafilatura, feedparser) are
+  offloaded with `asyncio.to_thread`.
+- Alembic migrations remain synchronous.
+
+---
+
 # High-Level Pipeline
 
 ## News ingestion

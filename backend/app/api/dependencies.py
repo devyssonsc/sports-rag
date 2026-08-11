@@ -1,5 +1,5 @@
 from fastapi import Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.postgres import get_db
 
@@ -30,19 +30,19 @@ def get_discovery_factory() -> DiscoveryFactory:
 # ------------------------------------------------------------------
 
 def get_article_repository(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> ArticleRepository:
     return ArticleRepository(db)
 
 
 def get_chunk_repository(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> ChunkRepository:
     return ChunkRepository(db)
 
 
 def get_news_source_repository(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> NewsSourceRepository:
     return NewsSourceRepository(db)
 

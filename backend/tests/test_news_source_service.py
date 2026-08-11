@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -14,11 +14,11 @@ from app.services.news_source_service import NewsSourceService
 
 
 def make_service():
-    repository = MagicMock()
+    repository = AsyncMock()
     return NewsSourceService(repository), repository
 
 
-def test_create_rss_news_source():
+async def test_create_rss_news_source():
     service, repository = make_service()
     repository.get_by_url.return_value = None
     repository.create.side_effect = lambda news_source: news_source
@@ -29,16 +29,16 @@ def test_create_rss_news_source():
         type=SourceType.RSS,
     )
 
-    result = service.create_news_source(data)
+    result = await service.create_news_source(data)
 
-    repository.get_by_url.assert_called_once_with("https://example.com/rss")
-    repository.create.assert_called_once()
+    repository.get_by_url.assert_awaited_once_with("https://example.com/rss")
+    repository.create.assert_awaited_once()
     assert result.name == "Example"
     assert result.url == "https://example.com/rss"
     assert result.type == SourceType.RSS
 
 
-def test_create_crawl_is_rejected():
+async def test_create_crawl_is_rejected():
     service, repository = make_service()
 
     data = NewsSourceCreate(
@@ -48,12 +48,12 @@ def test_create_crawl_is_rejected():
     )
 
     with pytest.raises(UnsupportedNewsSourceType):
-        service.create_news_source(data)
+        await service.create_news_source(data)
 
-    repository.create.assert_not_called()
+    repository.create.assert_not_awaited()
 
 
-def test_create_duplicate_url_is_rejected():
+async def test_create_duplicate_url_is_rejected():
     service, repository = make_service()
     repository.get_by_url.return_value = NewsSource(
         name="Existing",
@@ -68,14 +68,14 @@ def test_create_duplicate_url_is_rejected():
     )
 
     with pytest.raises(NewsSourceAlreadyExists):
-        service.create_news_source(data)
+        await service.create_news_source(data)
 
-    repository.create.assert_not_called()
+    repository.create.assert_not_awaited()
 
 
-def test_get_missing_news_source_raises_not_found():
+async def test_get_missing_news_source_raises_not_found():
     service, repository = make_service()
     repository.get.return_value = None
 
     with pytest.raises(NewsSourceNotFound):
-        service.get(999)
+        await service.get(999)

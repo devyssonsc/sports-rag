@@ -18,7 +18,7 @@ class NewsSourceService:
     def __init__(self, repository: NewsSourceRepository):
         self.repository = repository
 
-    def create_news_source(
+    async def create_news_source(
         self,
         news_source_data: NewsSourceCreate,
     ) -> NewsSource:
@@ -27,7 +27,7 @@ class NewsSourceService:
                 f"NewsSource type '{news_source_data.type}' is not supported yet."
             )
 
-        existing_news_source = self.repository.get_by_url(
+        existing_news_source = await self.repository.get_by_url(
             news_source_data.url
         )
 
@@ -44,13 +44,13 @@ class NewsSourceService:
 
         logger.info("Creating news source: %s", news_source.url)
 
-        return self.repository.create(news_source)
+        return await self.repository.create(news_source)
 
-    def list_news_sources(self) -> list[NewsSource]:
-        return self.repository.list()
+    async def list_news_sources(self) -> list[NewsSource]:
+        return await self.repository.list()
 
-    def get(self, news_source_id: int) -> NewsSource:
-        news_source = self.repository.get(news_source_id)
+    async def get(self, news_source_id: int) -> NewsSource:
+        news_source = await self.repository.get(news_source_id)
 
         if not news_source:
             raise NewsSourceNotFound()

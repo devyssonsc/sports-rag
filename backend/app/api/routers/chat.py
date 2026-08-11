@@ -20,13 +20,13 @@ router = APIRouter(
     "",
     response_model=ChatResponse,
 )
-def chat(
+async def chat(
     request: ChatRequest,
     service: ChatService = Depends(
         get_chat_service
     ),
 ):
 
-    return service.chat(
+    return await service.chat(
         request.question
     )

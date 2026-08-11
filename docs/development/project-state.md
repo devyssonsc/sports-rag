@@ -184,6 +184,23 @@ Implemented
 
 ---
 
+# Execution Model
+
+Status: Completed (async foundation)
+
+Implemented
+
+- Async FastAPI endpoints
+- Async SQLAlchemy (`AsyncSession` over psycopg 3)
+- `AsyncQdrantClient`
+- Async Together AI client (embeddings and generation)
+- Blocking libraries (Trafilatura, feedparser) offloaded via `asyncio.to_thread`
+- Alembic remains synchronous
+
+See ADR-006 for the decision and rationale.
+
+---
+
 # External Technologies
 
 - FastAPI
