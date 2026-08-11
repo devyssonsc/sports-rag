@@ -1,3 +1,5 @@
+import types
+
 from unittest.mock import AsyncMock
 
 from app.dto.source_article import SourceArticle
@@ -24,6 +26,8 @@ def make_service():
         "article_repository": article_repository,
         "article_content_service": article_content_service,
         "chunk_service": chunk_service,
+        "embedding_service": embedding_service,
+        "vector_repository": vector_repository,
     }
 
 
@@ -65,6 +69,33 @@ async def test_skips_too_short_content():
     assert result.skipped == 1
     assert result.inserted == 0
     m["article_repository"].create.assert_not_awaited()
+
+
+async def test_batches_embeddings_for_article_chunks():
+    service, m = make_service()
+    m["article_repository"].get_by_url.return_value = None
+    m["article_content_service"].extract.return_value = "x" * (
+        IngestionService.MIN_CONTENT_LENGTH + 1
+    )
+    m["article_repository"].create.side_effect = lambda article: article
+
+    chunks = [
+        types.SimpleNamespace(id=1, article_id=10, content="c1"),
+        types.SimpleNamespace(id=2, article_id=10, content="c2"),
+    ]
+    m["chunk_service"].create_chunks.return_value = chunks
+    m["embedding_service"].embed_documents.return_value = [[0.1], [0.2]]
+
+    result = await service.ingest(source(), one_article())
+
+    assert result.inserted == 1
+    # one batched embedding call for the whole article...
+    m["embedding_service"].embed_documents.assert_awaited_once_with(
+        ["c1", "c2"]
+    )
+    m["embedding_service"].embed_document.assert_not_awaited()
+    # ...but still one vector upsert per chunk
+    assert m["vector_repository"].upsert_chunk_embedding.await_count == 2
 
 
 async def test_ingests_valid_content():

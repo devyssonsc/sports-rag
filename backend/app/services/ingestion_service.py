@@ -77,17 +77,19 @@ class IngestionService:
 
             chunks = await self.chunk_service.create_chunks(article)
 
-            for chunk in chunks:
+            if chunks:
 
-                embedding = await self.embedding_service.embed_document(
-                    chunk.content
+                embeddings = await self.embedding_service.embed_documents(
+                    [chunk.content for chunk in chunks]
                 )
 
-                await self.vector_repository.upsert_chunk_embedding(
-                    chunk_id=chunk.id,
-                    article_id=chunk.article_id,
-                    embedding=embedding,
-                )
+                for chunk, embedding in zip(chunks, embeddings):
+
+                    await self.vector_repository.upsert_chunk_embedding(
+                        chunk_id=chunk.id,
+                        article_id=chunk.article_id,
+                        embedding=embedding,
+                    )
 
             inserted += 1
 
