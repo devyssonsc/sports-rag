@@ -22,7 +22,9 @@ from app.services.llm_service import LLMService
 from app.services.prompt_builder_service import PromptBuilderService
 from app.services.rerank_service import RerankService
 from app.services.retrieval_service import RetrievalService
+from app.services.sparse_embedding_service import SparseEmbeddingService
 
+from evaluation._retry import with_retry
 from evaluation.judge import RagTriadJudge
 from evaluation.schemas import QuestionResult, RunSummary
 
@@ -33,6 +35,8 @@ async def evaluate(
     limit: int = 5,
     rerank: bool = False,
     candidate_pool: int = 20,
+    window: int = 0,
+    hybrid: bool = False,
 ) -> RunSummary:
     """Run the whole question set through the pipeline and score it."""
 
@@ -45,6 +49,7 @@ async def evaluate(
     # The reranker is independent of the judge model, so context-relevance scores
     # stay an honest measurement of the reranked retrieval.
     rerank_service = RerankService() if rerank else None
+    sparse_embedding_service = SparseEmbeddingService() if hybrid else None
 
     results: list[QuestionResult] = []
 
@@ -55,6 +60,7 @@ async def evaluate(
             chunk_repository=ChunkRepository(db),
             article_repository=ArticleRepository(db),
             rerank_service=rerank_service,
+            sparse_embedding_service=sparse_embedding_service,
         )
 
         for index, question in enumerate(questions, start=1):
@@ -63,6 +69,7 @@ async def evaluate(
                 question=question,
                 limit=limit,
                 candidate_pool=candidate_pool,
+                window=window,
                 retrieval_service=retrieval_service,
                 prompt_builder=prompt_builder,
                 llm_service=llm_service,
@@ -78,6 +85,7 @@ async def _evaluate_question(
     question: str,
     limit: int,
     candidate_pool: int,
+    window: int,
     retrieval_service: RetrievalService,
     prompt_builder: PromptBuilderService,
     llm_service: LLMService,
@@ -90,9 +98,10 @@ async def _evaluate_question(
         question,
         limit,
         candidate_pool=candidate_pool,
+        window=window,
     )
     prompt = prompt_builder.build(question, chunks)
-    answer = await llm_service.generate(prompt)
+    answer = await with_retry(lambda: llm_service.generate(prompt))
 
     latency = time.perf_counter() - started
 

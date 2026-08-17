@@ -19,6 +19,7 @@ from statistics import mean
 
 from app.services.llm_service import LLMService
 
+from evaluation._retry import with_retry
 from evaluation.schemas import MetricScore
 
 
@@ -158,9 +159,11 @@ class RagTriadJudge:
         return MetricScore(score=avg, reason=reason)
 
     async def _judge(self, prompt: str) -> MetricScore:
-        raw = await self.llm_service.generate(
-            prompt,
-            temperature=JUDGE_TEMPERATURE,
+        raw = await with_retry(
+            lambda: self.llm_service.generate(
+                prompt,
+                temperature=JUDGE_TEMPERATURE,
+            )
         )
         return _parse_score(raw)
 

@@ -18,6 +18,7 @@ class RetrievalService:
         chunk_repository: ChunkRepository,
         article_repository: ArticleRepository,
         rerank_service=None,
+        sparse_embedding_service=None,
     ):
         self.embedding_service = embedding_service
         self.vector_repository = vector_repository
@@ -26,6 +27,9 @@ class RetrievalService:
         # Optional cross-encoder reranker. When absent (production default),
         # retrieval behaves exactly as before.
         self.rerank_service = rerank_service
+        # Optional BM25 sparse embedder. Its presence turns retrieval hybrid
+        # (dense + sparse fused with RRF).
+        self.sparse_embedding_service = sparse_embedding_service
 
     async def search(
         self,
@@ -48,6 +52,7 @@ class RetrievalService:
         query: str,
         limit: int = 5,
         candidate_pool: int = 20,
+        window: int = 0,
     ) -> list[RetrievedChunk]:
 
         # Reranking is enabled simply by the presence of a rerank_service, so the
@@ -61,15 +66,33 @@ class RetrievalService:
 
         embedding = await self.embedding_service.embed_query(query)
 
-        points = await self.vector_repository.search(
-            embedding,
-            search_limit,
-        )
+        if self.sparse_embedding_service is not None:
+            # Hybrid: run dense and sparse searches, fuse their rankings (RRF).
+            dense_points = await self.vector_repository.search(
+                embedding,
+                search_limit,
+            )
+            sparse_indices, sparse_values = (
+                await self.sparse_embedding_service.embed_query(query)
+            )
+            sparse_points = await self.vector_repository.search_sparse(
+                sparse_indices,
+                sparse_values,
+                search_limit,
+            )
+            ranked = _reciprocal_rank_fusion(
+                dense_points,
+                sparse_points,
+                search_limit,
+            )
+        else:
+            dense_points = await self.vector_repository.search(
+                embedding,
+                search_limit,
+            )
+            ranked = [(int(point.id), point.score) for point in dense_points]
 
-        chunk_ids = [
-            int(point.id)
-            for point in points
-        ]
+        chunk_ids = [chunk_id for chunk_id, _ in ranked]
 
         chunks = await self.chunk_repository.get_by_ids(
             chunk_ids
@@ -98,9 +121,9 @@ class RetrievalService:
 
         results = []
 
-        for point in points:
+        for chunk_id, score in ranked:
 
-            chunk = chunk_map[int(point.id)]
+            chunk = chunk_map[chunk_id]
 
             article = article_map[
                 chunk.article_id
@@ -114,7 +137,7 @@ class RetrievalService:
                     source=article.source,
                     published_at=article.published_at,
                     chunk_index=chunk.chunk_index,
-                    score=point.score,
+                    score=score,
                     content=chunk.content,
                 )
             )
@@ -126,4 +149,69 @@ class RetrievalService:
                 top_n=limit,
             )
 
+        # Sentence-window: retrieval stays precise (small chunks), but each final
+        # chunk is widened with its neighbours from the same article so the LLM
+        # gets surrounding context. Applied after reranking, on the final chunks.
+        if window > 0:
+            results = await self._expand_windows(results, window)
+
         return results
+
+    async def _expand_windows(
+        self,
+        results: list[RetrievedChunk],
+        window: int,
+    ) -> list[RetrievedChunk]:
+
+        # One fetch per distinct article, mapping chunk_index -> content.
+        by_article: dict[int, dict[int, str]] = {}
+        for article_id in {result.article_id for result in results}:
+            article_chunks = await self.chunk_repository.get_by_article_id(
+                article_id
+            )
+            by_article[article_id] = {
+                chunk.chunk_index: chunk.content
+                for chunk in article_chunks
+            }
+
+        expanded = []
+        for result in results:
+            index_map = by_article[result.article_id]
+            neighbours = [
+                index_map[i]
+                for i in range(
+                    result.chunk_index - window,
+                    result.chunk_index + window + 1,
+                )
+                if i in index_map
+            ]
+            expanded.append(
+                result.model_copy(
+                    update={"content": "\n".join(neighbours)}
+                )
+            )
+
+        return expanded
+
+
+def _reciprocal_rank_fusion(
+    dense_points,
+    sparse_points,
+    limit: int,
+    k: int = 60,
+) -> list[tuple[int, float]]:
+    """Fuse two ranked result lists with Reciprocal Rank Fusion.
+
+    Each list contributes 1/(k + rank) per chunk; scores are summed across lists,
+    so a chunk ranked well by either dense or sparse retrieval rises. Returns the
+    top ``limit`` as (chunk_id, fused_score).
+    """
+    scores: dict[int, float] = {}
+
+    for points in (dense_points, sparse_points):
+        for rank, point in enumerate(points):
+            chunk_id = int(point.id)
+            scores[chunk_id] = scores.get(chunk_id, 0.0) + 1.0 / (k + rank + 1)
+
+    ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+    return ranked[:limit]

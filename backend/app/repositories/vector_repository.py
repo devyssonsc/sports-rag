@@ -4,13 +4,20 @@ from qdrant_client import AsyncQdrantClient
 
 from qdrant_client.models import PointStruct
 
-from qdrant_client.models import Distance, VectorParams
+from qdrant_client.models import (
+    Distance,
+    SparseVector,
+    SparseVectorParams,
+    VectorParams,
+)
 from qdrant_client.http.exceptions import UnexpectedResponse
 
 
 class VectorRepository:
 
     COLLECTION_NAME = "article_chunks"
+    SPARSE_COLLECTION_NAME = "article_chunks_sparse"
+    SPARSE_VECTOR_NAME = "text"
     VECTOR_SIZE = 1024
 
     def __init__(self):
@@ -21,6 +28,7 @@ class VectorRepository:
         )
 
         self._collection_ready = False
+        self._sparse_collection_ready = False
 
     async def get_collections(self):
         return await self.client.get_collections()
@@ -78,6 +86,72 @@ class VectorRepository:
         results = await self.client.query_points(
             collection_name=self.COLLECTION_NAME,
             query=embedding,
+            limit=limit,
+        )
+
+        return results.points
+
+    # ------------------------------------------------------------------
+    # Sparse (BM25) collection — used for hybrid retrieval
+    # ------------------------------------------------------------------
+
+    async def _ensure_sparse_collection_exists(self) -> None:
+        if self._sparse_collection_ready:
+            return
+
+        try:
+            await self.client.get_collection(self.SPARSE_COLLECTION_NAME)
+        except UnexpectedResponse:
+            await self.client.create_collection(
+                collection_name=self.SPARSE_COLLECTION_NAME,
+                vectors_config={},
+                sparse_vectors_config={
+                    self.SPARSE_VECTOR_NAME: SparseVectorParams(),
+                },
+            )
+
+        self._sparse_collection_ready = True
+
+    async def upsert_sparse_embedding(
+        self,
+        chunk_id: int,
+        article_id: int,
+        indices: list[int],
+        values: list[float],
+    ) -> None:
+
+        await self._ensure_sparse_collection_exists()
+
+        await self.client.upsert(
+            collection_name=self.SPARSE_COLLECTION_NAME,
+            wait=True,
+            points=[
+                PointStruct(
+                    id=chunk_id,
+                    vector={
+                        self.SPARSE_VECTOR_NAME: SparseVector(
+                            indices=indices,
+                            values=values,
+                        )
+                    },
+                    payload={"article_id": article_id},
+                )
+            ],
+        )
+
+    async def search_sparse(
+        self,
+        indices: list[int],
+        values: list[float],
+        limit: int = 5,
+    ):
+
+        await self._ensure_sparse_collection_exists()
+
+        results = await self.client.query_points(
+            collection_name=self.SPARSE_COLLECTION_NAME,
+            query=SparseVector(indices=indices, values=values),
+            using=self.SPARSE_VECTOR_NAME,
             limit=limit,
         )
 

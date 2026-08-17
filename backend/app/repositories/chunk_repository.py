@@ -44,3 +44,8 @@ class ChunkRepository:
         statement = select(Chunk).where(Chunk.id.in_(chunk_ids))
         result = await self.db.scalars(statement)
         return list(result.all())
+
+    async def list_all(self) -> list[Chunk]:
+        statement = select(Chunk).order_by(Chunk.id)
+        result = await self.db.scalars(statement)
+        return list(result.all())

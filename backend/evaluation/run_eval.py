@@ -80,6 +80,8 @@ async def _run(
     limit: int,
     rerank: bool,
     candidate_pool: int,
+    window: int,
+    hybrid: bool,
 ) -> None:
     from app.database.postgres import SessionLocal
     from evaluation import corpus
@@ -100,8 +102,12 @@ async def _run(
 
     questions = load_questions()
     mode = f"top-{limit}"
+    if hybrid:
+        mode += ", hybrid"
     if rerank:
         mode += f", rerank from {candidate_pool}"
+    if window:
+        mode += f", window ±{window}"
     print(f"\nRunning experiment '{experiment}' over {len(questions)} questions ({mode})...\n")
 
     summary = await evaluate(
@@ -110,6 +116,8 @@ async def _run(
         limit,
         rerank=rerank,
         candidate_pool=candidate_pool,
+        window=window,
+        hybrid=hybrid,
     )
     detail_path = save_run(summary)
 
@@ -120,6 +128,43 @@ async def _run(
     print(f"answer relevance  : {_fmt(summary.mean_answer_relevance)}")
     print(f"mean latency (s)  : {summary.mean_latency_seconds}")
     print(f"detail written to : {detail_path}")
+
+
+async def _index_sparse() -> None:
+    """Backfill the BM25 sparse collection from all chunks in Postgres.
+
+    Dense vectors are untouched; this only adds the sparse index that hybrid
+    retrieval fuses with. Idempotent (upserts by chunk id).
+    """
+    from app.database.postgres import SessionLocal
+    from app.repositories.chunk_repository import ChunkRepository
+    from app.repositories.vector_repository import VectorRepository
+    from app.services.sparse_embedding_service import SparseEmbeddingService
+
+    sparse_service = SparseEmbeddingService()
+    vector_repository = VectorRepository()
+
+    async with SessionLocal() as db:
+        chunks = await ChunkRepository(db).list_all()
+
+    if not chunks:
+        raise SystemExit("No chunks found. Ingest a corpus first.")
+
+    print(f"Indexing {len(chunks)} chunks into the BM25 sparse collection...")
+
+    embeddings = await sparse_service.embed_documents(
+        [chunk.content for chunk in chunks]
+    )
+
+    for chunk, (indices, values) in zip(chunks, embeddings):
+        await vector_repository.upsert_sparse_embedding(
+            chunk_id=chunk.id,
+            article_id=chunk.article_id,
+            indices=indices,
+            values=values,
+        )
+
+    print(f"Done. Sparse collection '{vector_repository.SPARSE_COLLECTION_NAME}' ready.")
 
 
 def _board() -> None:
@@ -171,6 +216,23 @@ def main() -> None:
         default=20,
         help="Candidate pool size fetched before reranking (default: 20).",
     )
+    run_parser.add_argument(
+        "--window",
+        type=int,
+        default=0,
+        help="Sentence-window: expand each final chunk with +/-N neighbours "
+             "(default: 0 = off).",
+    )
+    run_parser.add_argument(
+        "--hybrid",
+        action="store_true",
+        help="Hybrid retrieval: fuse dense + BM25 sparse (needs 'index-sparse').",
+    )
+
+    sub.add_parser(
+        "index-sparse",
+        help="Backfill the BM25 sparse collection from all chunks (for --hybrid).",
+    )
 
     sub.add_parser("board", help="Print the leaderboard of all experiments.")
 
@@ -179,7 +241,16 @@ def main() -> None:
     if args.command == "sample":
         asyncio.run(_sample(args.count))
     elif args.command == "run":
-        asyncio.run(_run(args.experiment, args.limit, args.rerank, args.candidates))
+        asyncio.run(_run(
+            args.experiment,
+            args.limit,
+            args.rerank,
+            args.candidates,
+            args.window,
+            args.hybrid,
+        ))
+    elif args.command == "index-sparse":
+        asyncio.run(_index_sparse())
     elif args.command == "board":
         _board()
 
