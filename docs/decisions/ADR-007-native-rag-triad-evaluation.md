@@ -146,23 +146,35 @@ Negative:
 
 ---
 
-# First Results (baseline and first experiment)
+# Results (experiment log)
 
 Corpus: 494 articles / 1281 chunks. Question set: 20 (14 single-article,
 6 thematic). Retrieval top-5.
 
-| Experiment  | Context Rel. | Groundedness | Answer Rel. |
-|-------------|:-----------:|:------------:|:-----------:|
-| baseline    | 0.393       | 0.929        | 0.905       |
-| e5-instruct | 0.464       | 0.968        | 0.966       |
-| top10 (k=10)| 0.322       | 0.968        | 0.961       |
+| Experiment    | Context Rel. | Groundedness | Answer Rel. | Outcome |
+|---------------|:-----------:|:------------:|:-----------:|---------|
+| baseline      | 0.393       | 0.929        | 0.905       | reference |
+| e5-instruct   | 0.464       | 0.968        | 0.966       | **adopted** |
+| top10 (k=10)  | 0.322       | 0.968        | 0.961       | rejected |
+| rerank        | 0.484       | 0.989        | 0.961       | **adopted (production)** |
+| rerank-window | 0.519       | 0.943        | 0.945       | rejected (trade-off) |
+| hybrid-rerank | 0.455       | 0.990        | 0.942       | rejected (no gain) |
 
 - **baseline** exposed retrieval as the bottleneck (low Context Relevance).
-- **e5-instruct** (applying the e5 instruction prefix to query embeddings)
-  improved all three and recovered a full retrieval miss. Adopted into the
-  pipeline.
-- **top10** confirmed the precision nature of Context Relevance: more chunks
-  lowered the mean without improving answers. Rejected; `top_k` stays at 5.
+- **e5-instruct** (e5 instruction prefix on query embeddings) improved all three
+  and recovered a full retrieval miss. Adopted.
+- **top10** confirmed Context Relevance is precision-oriented: more chunks lowered
+  the mean without improving answers. Rejected; `top_k` stays 5.
+- **rerank** (local cross-encoder, retrieve-then-rerank) raised Context Relevance
+  and Groundedness at no API cost. Adopted as the production retrieval default
+  (see ADR-008).
+- **rerank-window** (sentence-window ±1) raised Context Relevance but lowered
+  Groundedness (0.99 → 0.94): widening chunks adds neighbour text that does not
+  always support the answer. Not adopted — Groundedness is the anti-hallucination
+  metric.
+- **hybrid-rerank** (dense + BM25 fused with RRF) did not improve; Context
+  Relevance dipped. The question set is semantic-heavy, where dense e5 already
+  wins and BM25 adds lexical noise. Kept as an eval capability, not adopted.
 
 ---
 

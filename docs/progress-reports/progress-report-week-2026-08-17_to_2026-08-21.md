@@ -41,6 +41,17 @@ mensurável, sem alterar o comportamento de produção do chat.
 -   **Experimento top10 (`top_k=10`):** Context Relevance caiu para **0.32** sem
     melhorar as respostas — confirma que a métrica é de **precisão** (média por
     chunk), enviesada contra top_k maior. **Rejeitado; `top_k` fica em 5.**
+-   **Reranking (adotado em produção, ADR-008):** cross-encoder local via
+    fastembed (ONNX, sem torch), retrieve-then-rerank (20 → top-5). Together sem
+    rerank serverless → optou-se por local. Resultado **0.48 / 0.99 / 0.96**.
+    Ligado ao `/chat` (singleton via `lru_cache`), validado end-to-end.
+-   **Sentence-window (rejeitado):** `--window 1` sobe Context Relevance (0.52)
+    mas baixa Groundedness (0.99 → 0.94) — o contexto alargado nem sempre apoia
+    a resposta. Fica como capacidade do harness.
+-   **Hybrid BM25 (rejeitado):** coleção esparsa `Qdrant/bm25` + fusão RRF com a
+    densa. **Sem ganho** (0.46) — perguntas semânticas, onde o e5 já vence e o
+    BM25 mete ruído lexical. Fica como capacidade do harness (`index-sparse`).
+-   **Infra:** volume de cache para os modelos ONNX; retry/backoff no harness.
 
 ------------------------------------------------------------------------
 
@@ -50,12 +61,11 @@ mensurável, sem alterar o comportamento de produção do chat.
 
 -   Harness de avaliação da RAG Triad (nativo, LLM-as-a-judge) — Fase 6.
 -   Corpus e conjunto de perguntas congelados; leaderboard de experiências.
--   Formatação da query no padrão instruct do e5 no retrieval (melhoria medida).
+-   Produção: query no padrão instruct do e5 + reranking cross-encoder local.
 
 ## Próximos passos
 
-1.  Experimento de **reranking** (retrieve 20 → rerank → top-5) para atacar a
-    precisão do contexto de forma limpa (mantém 5 chunks, melhora a qualidade).
-2.  Sentence-window / expansão por vizinhos usando o `chunk_index`.
+1.  Chunking sweep (variar `chunk_size`/overlap, reindexar) e query rewriting/HyDE.
+2.  Recall@k com respostas-verdade (a métrica atual mede só precisão).
 3.  Paralelizar a avaliação de Context Relevance no harness (reduzir latência).
 4.  (Opcional) juiz distinto do gerador para reduzir enviesamento same-model.

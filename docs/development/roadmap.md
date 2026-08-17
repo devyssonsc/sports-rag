@@ -165,8 +165,10 @@ leaderboard for comparing experiments. See ADR-007.
 
 In Progress
 
-- Harness, frozen corpus/questions, baseline and first experiments done.
-- e5 instruction-prefixed queries adopted; reranking and sentence-window next.
+- Harness, frozen corpus/questions, baseline and a series of experiments done.
+- Adopted: e5 instruction-prefixed queries and cross-encoder reranking (ADR-008).
+- Measured but not adopted: larger top_k, sentence-window, hybrid BM25.
+- Next: chunking sweep, query rewriting, recall@k with ground-truth.
 
 ---
 

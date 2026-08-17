@@ -156,9 +156,14 @@ Implemented
 
 - Semantic search (cosine similarity over Qdrant)
 - Query embedded via `embed_query` (e5 instruction prefix), documents as raw text
+- Cross-encoder reranking in production: retrieve-then-rerank (pool of 20 →
+  top-5) via a local fastembed model (ADR-008)
 - Chunk recovery
 - Metadata recovery
 - Ranked context (top-5)
+
+Available as eval-only capabilities (not in the production path): sentence-window
+neighbour expansion and hybrid dense + BM25 retrieval (RRF fusion).
 
 ---
 
@@ -209,21 +214,29 @@ Implemented
 
 - LLM-as-a-judge feedback functions for the three metrics, each with a
   chain-of-thought reason
-- Runner over a frozen question set; three metrics judged concurrently
+- Runner over a frozen question set; three metrics judged concurrently, with
+  retry/backoff on transient provider errors
 - Frozen corpus snapshot (drift detection) + random article sampling for
   question authoring
-- Leaderboard comparing experiments; CLI (`sample` / `run` / `board`)
+- Leaderboard comparing experiments; CLI (`sample` / `run` / `index-sparse` /
+  `board`), with `--rerank`, `--window` and `--hybrid` toggles
 - `LLMService.generate` accepts an optional `temperature` (judge uses 0;
   production chat unchanged)
 
-Baseline (494 articles / 1281 chunks, top-5): Context Relevance 0.39,
-Groundedness 0.93, Answer Relevance 0.91. First adopted improvement: the e5
-instruction prefix on queries (0.46 / 0.97 / 0.97).
+Experiments run (494 articles / 1281 chunks, top-5). Leaderboard
+(Context / Groundedness / Answer):
+
+- baseline 0.39 / 0.93 / 0.91
+- e5-instruct 0.46 / 0.97 / 0.97 — **adopted**
+- top10 0.32 / 0.97 / 0.96 — rejected (precision metric diluted)
+- rerank 0.48 / 0.99 / 0.96 — **adopted in production** (ADR-008)
+- rerank-window 0.52 / 0.94 / 0.95 — rejected (Groundedness trade-off)
+- hybrid-rerank 0.46 / 0.99 / 0.94 — rejected (no gain on semantic questions)
 
 Pending
 
-- Reranking experiment (retrieve-then-rerank) to raise context precision
-- Sentence-window / neighbour expansion
+- Chunking sweep; query rewriting / HyDE; prompt-engineering experiments
+- Recall@k with ground-truth answers (the current metric measures precision only)
 - Optional distinct judge model; parallelize Context Relevance judging
 
 ---
@@ -254,6 +267,7 @@ See ADR-006 for the decision and rationale.
 - Qdrant
 - Together AI
 - LlamaIndex
+- fastembed (cross-encoder reranking + BM25 sparse, local ONNX)
 - Trafilatura
 - httpx
 - lxml
