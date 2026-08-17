@@ -19,10 +19,13 @@ class RerankService:
     """
 
     MODEL_NAME = os.getenv("RERANK_MODEL", "Xenova/ms-marco-MiniLM-L-6-v2")
+    CACHE_DIR = os.getenv("FASTEMBED_CACHE_PATH")
 
     def __init__(self):
-        # Loads (and, on first use, downloads) the ONNX model once.
-        self.encoder = TextCrossEncoder(model_name=self.MODEL_NAME)
+        # Loads (and, on first use, downloads) the ONNX model once. The cache dir
+        # is a mounted volume, so the download persists across container restarts.
+        kwargs = {"cache_dir": self.CACHE_DIR} if self.CACHE_DIR else {}
+        self.encoder = TextCrossEncoder(model_name=self.MODEL_NAME, **kwargs)
 
     async def rerank(
         self,
