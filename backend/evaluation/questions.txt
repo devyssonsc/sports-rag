@@ -1,0 +1,27 @@
+# Frozen evaluation question set for the RAG Triad harness.
+#
+# Rules (keep this set STABLE so experiments stay comparable):
+#   - One question per line. Blank lines and lines starting with '#' are ignored.
+#   - Aim for 15-30 questions grounded in the ACTUAL ingested articles.
+#   - After ingesting your corpus, run:
+#         docker compose exec backend python -m evaluation.run_eval freeze
+#     then open evaluation/corpus_snapshot.json to see the real article titles,
+#     and rewrite the questions below so they are answerable from that content.
+#   - Once the baseline is measured, do NOT change these questions between
+#     experiments (only change chunking / retrieval / prompting).
+#
+# The examples below are PLACEHOLDERS — replace them with questions about your
+# own football news corpus.
+
+Qual foi o resultado do último jogo mencionado nas notícias?
+Que jogador marcou mais golos segundo os artigos?
+Que transferências foram noticiadas recentemente?
+O que foi dito sobre lesões de jogadores?
+Que treinador foi mencionado e em que contexto?
+Qual é a classificação atual referida nas notícias?
+Que declarações fez o treinador após o jogo?
+Que competição está a ser coberta pelos artigos?
+Houve alguma polémica de arbitragem noticiada?
+Qual é o próximo jogo mencionado e quando se realiza?
+Que equipa está em melhor forma segundo as notícias?
+O que foi reportado sobre o mercado de transferências?

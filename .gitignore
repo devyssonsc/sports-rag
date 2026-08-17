@@ -59,3 +59,11 @@ Thumbs.db
 # ======================================
 
 *.pid
+
+# ======================================
+# Evaluation harness (generated artifacts)
+# ======================================
+
+backend/evaluation/results/
+backend/evaluation/corpus_snapshot.json
+backend/evaluation/sample_articles.md
