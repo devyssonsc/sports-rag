@@ -45,7 +45,7 @@ class RetrievalService:
         limit: int = 5,
     ) -> list[RetrievedChunk]:
 
-        embedding = await self.embedding_service.embed_document(query)
+        embedding = await self.embedding_service.embed_query(query)
 
         points = await self.vector_repository.search(
             embedding,

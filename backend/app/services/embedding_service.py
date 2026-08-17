@@ -10,14 +10,23 @@ class EmbeddingService:
     # Maximum number of inputs sent to the embeddings API per request.
     MAX_BATCH = 100
 
+    # The e5 *-instruct models are asymmetric: passages are embedded as raw text,
+    # while queries must carry an instruction prefix in the form
+    # "Instruct: {task}\nQuery: {text}". This aligns the query vector with the
+    # "query space" the model was trained on. Documents are NOT prefixed.
+    QUERY_INSTRUCTION = (
+        "Given a football news question, "
+        "retrieve news passages that answer it"
+    )
+
     def __init__(self):
         self.client = AsyncTogether(
             api_key=os.getenv("TOGETHER_API_KEY")
         )
 
-    #Os métodos embed_document() e embed_query() são iguais.
-    #Mas, se amanhã mudarmos para um modelo que exija prompts diferentes
-    #ou algum pré-processamento específico para documentos e consultas, não precisaremos alterar o restante do projeto.
+    # embed_document embeds passages as raw text (the document side of e5).
+    # embed_query prefixes the instruction (the query side). They are now
+    # deliberately different — that asymmetry is what e5-instruct expects.
     async def embed_document(
         self,
         text: str,
@@ -59,9 +68,11 @@ class EmbeddingService:
         query: str,
     ) -> list[float]:
 
+        formatted = f"Instruct: {self.QUERY_INSTRUCTION}\nQuery: {query}"
+
         response = await self.client.embeddings.create(
             model=self.MODEL_NAME,
-            input=query,
+            input=formatted,
         )
 
         return response.data[0].embedding
