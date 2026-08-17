@@ -1,0 +1,5 @@
+#!/bin/sh
+# Strip any AI co-author trailer (Claude / Anthropic) from commit messages.
+# Human co-authors are kept. Enable with:
+#   git config core.hooksPath .githooks
+sed -E -i '/^[Cc]o-[Aa]uthored-[Bb]y:.*([Cc]laude|[Aa]nthropic)/d' "$1"
