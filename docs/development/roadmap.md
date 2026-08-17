@@ -155,9 +155,18 @@ Measure system quality.
 - Recall metrics
 - Benchmark datasets
 
+### Approach
+
+RAG Triad (Context Relevance, Groundedness, Answer Relevance) implemented
+natively as an LLM-as-a-judge harness, with a frozen corpus + question set and a
+leaderboard for comparing experiments. See ADR-007.
+
 ### Status
 
-Planned
+In Progress
+
+- Harness, frozen corpus/questions, baseline and first experiments done.
+- e5 instruction-prefixed queries adopted; reranking and sentence-window next.
 
 ---
 

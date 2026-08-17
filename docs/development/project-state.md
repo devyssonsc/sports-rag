@@ -129,6 +129,9 @@ Implemented
 - Document embeddings
 - Query embeddings
 - Together AI integration
+- Asymmetric e5 usage: passages embedded as raw text, queries prefixed with the
+  e5 instruction (`Instruct: {task}\nQuery: {text}`). This alignment was
+  validated by the evaluation harness (see Evaluation) and improved retrieval.
 
 ---
 
@@ -151,10 +154,11 @@ Status: ðŸŸ¢ Completed
 
 Implemented
 
-- Semantic search
+- Semantic search (cosine similarity over Qdrant)
+- Query embedded via `embed_query` (e5 instruction prefix), documents as raw text
 - Chunk recovery
 - Metadata recovery
-- Ranked context
+- Ranked context (top-5)
 
 ---
 
@@ -189,6 +193,38 @@ Implemented
 - Complete RAG pipeline
 - Answer generation
 - Source attribution
+
+---
+
+## Evaluation (RAG Triad)
+
+Status: ðŸŸ¡ In Progress
+
+The RAG Triad (Context Relevance, Groundedness, Answer Relevance) is implemented
+natively as an offline LLM-as-a-judge harness (`backend/evaluation/`), not via
+TruLens. See ADR-007. It reuses the production services, so experiments are
+measured on the real pipeline.
+
+Implemented
+
+- LLM-as-a-judge feedback functions for the three metrics, each with a
+  chain-of-thought reason
+- Runner over a frozen question set; three metrics judged concurrently
+- Frozen corpus snapshot (drift detection) + random article sampling for
+  question authoring
+- Leaderboard comparing experiments; CLI (`sample` / `run` / `board`)
+- `LLMService.generate` accepts an optional `temperature` (judge uses 0;
+  production chat unchanged)
+
+Baseline (494 articles / 1281 chunks, top-5): Context Relevance 0.39,
+Groundedness 0.93, Answer Relevance 0.91. First adopted improvement: the e5
+instruction prefix on queries (0.46 / 0.97 / 0.97).
+
+Pending
+
+- Reranking experiment (retrieve-then-rerank) to raise context precision
+- Sentence-window / neighbour expansion
+- Optional distinct judge model; parallelize Context Relevance judging
 
 ---
 
@@ -236,6 +272,11 @@ See ADR-006 for the decision and rationale.
   which can leave orphaned points.
 - Background ingestion runs in-process (FastAPI BackgroundTasks): no retries and
   lost on restart. A task queue / worker and periodic scheduling are future work.
+- The evaluation Context Relevance metric is a per-chunk mean, i.e. precision-
+  oriented; it is biased against larger `top_k` and does not measure recall.
+  Measuring coverage would need a different metric (e.g. recall@k with
+  ground-truth answers). The judge is currently the same model that generates
+  answers (possible same-model bias). See ADR-007.
 
 ---
 
