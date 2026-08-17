@@ -20,6 +20,7 @@ from app.repositories.vector_repository import VectorRepository
 from app.services.embedding_service import EmbeddingService
 from app.services.llm_service import LLMService
 from app.services.prompt_builder_service import PromptBuilderService
+from app.services.rerank_service import RerankService
 from app.services.retrieval_service import RetrievalService
 
 from evaluation.judge import RagTriadJudge
@@ -30,6 +31,8 @@ async def evaluate(
     experiment: str,
     questions: list[str],
     limit: int = 5,
+    rerank: bool = False,
+    candidate_pool: int = 20,
 ) -> RunSummary:
     """Run the whole question set through the pipeline and score it."""
 
@@ -39,6 +42,10 @@ async def evaluate(
     llm_service = LLMService()
     judge = RagTriadJudge(llm_service)
 
+    # The reranker is independent of the judge model, so context-relevance scores
+    # stay an honest measurement of the reranked retrieval.
+    rerank_service = RerankService() if rerank else None
+
     results: list[QuestionResult] = []
 
     async with SessionLocal() as db:
@@ -47,6 +54,7 @@ async def evaluate(
             vector_repository=vector_repository,
             chunk_repository=ChunkRepository(db),
             article_repository=ArticleRepository(db),
+            rerank_service=rerank_service,
         )
 
         for index, question in enumerate(questions, start=1):
@@ -54,6 +62,7 @@ async def evaluate(
             result = await _evaluate_question(
                 question=question,
                 limit=limit,
+                candidate_pool=candidate_pool,
                 retrieval_service=retrieval_service,
                 prompt_builder=prompt_builder,
                 llm_service=llm_service,
@@ -68,6 +77,7 @@ async def evaluate(
 async def _evaluate_question(
     question: str,
     limit: int,
+    candidate_pool: int,
     retrieval_service: RetrievalService,
     prompt_builder: PromptBuilderService,
     llm_service: LLMService,
@@ -76,7 +86,11 @@ async def _evaluate_question(
 
     started = time.perf_counter()
 
-    chunks = await retrieval_service.retrieve_context(question, limit)
+    chunks = await retrieval_service.retrieve_context(
+        question,
+        limit,
+        candidate_pool=candidate_pool,
+    )
     prompt = prompt_builder.build(question, chunks)
     answer = await llm_service.generate(prompt)
 

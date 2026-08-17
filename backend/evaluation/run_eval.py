@@ -75,7 +75,12 @@ async def _sample(count: int) -> None:
     print("\nNext: read the content file and write questions in questions.txt.")
 
 
-async def _run(experiment: str, limit: int) -> None:
+async def _run(
+    experiment: str,
+    limit: int,
+    rerank: bool,
+    candidate_pool: int,
+) -> None:
     from app.database.postgres import SessionLocal
     from evaluation import corpus
     from evaluation.harness import evaluate
@@ -94,9 +99,18 @@ async def _run(experiment: str, limit: int) -> None:
             print(f"WARNING (corpus drift): {warning}")
 
     questions = load_questions()
-    print(f"\nRunning experiment '{experiment}' over {len(questions)} questions (top-{limit})...\n")
+    mode = f"top-{limit}"
+    if rerank:
+        mode += f", rerank from {candidate_pool}"
+    print(f"\nRunning experiment '{experiment}' over {len(questions)} questions ({mode})...\n")
 
-    summary = await evaluate(experiment, questions, limit)
+    summary = await evaluate(
+        experiment,
+        questions,
+        limit,
+        rerank=rerank,
+        candidate_pool=candidate_pool,
+    )
     detail_path = save_run(summary)
 
     print("\n=== RUN SUMMARY ===")
@@ -145,6 +159,18 @@ def main() -> None:
         default=5,
         help="Retrieval top-k (default: 5).",
     )
+    run_parser.add_argument(
+        "--rerank",
+        action="store_true",
+        help="Rerank a larger candidate pool down to top-k (needs a Together "
+             "rerank endpoint; model via RERANK_MODEL).",
+    )
+    run_parser.add_argument(
+        "--candidates",
+        type=int,
+        default=20,
+        help="Candidate pool size fetched before reranking (default: 20).",
+    )
 
     sub.add_parser("board", help="Print the leaderboard of all experiments.")
 
@@ -153,7 +179,7 @@ def main() -> None:
     if args.command == "sample":
         asyncio.run(_sample(args.count))
     elif args.command == "run":
-        asyncio.run(_run(args.experiment, args.limit))
+        asyncio.run(_run(args.experiment, args.limit, args.rerank, args.candidates))
     elif args.command == "board":
         _board()
 

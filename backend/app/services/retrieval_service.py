@@ -16,12 +16,16 @@ class RetrievalService:
         embedding_service: EmbeddingService,
         vector_repository: VectorRepository,
         chunk_repository: ChunkRepository,
-        article_repository: ArticleRepository
+        article_repository: ArticleRepository,
+        rerank_service=None,
     ):
         self.embedding_service = embedding_service
         self.vector_repository = vector_repository
         self.chunk_repository = chunk_repository
         self.article_repository = article_repository
+        # Optional cross-encoder reranker. When absent (production default),
+        # retrieval behaves exactly as before.
+        self.rerank_service = rerank_service
 
     async def search(
         self,
@@ -43,13 +47,23 @@ class RetrievalService:
         self,
         query: str,
         limit: int = 5,
+        candidate_pool: int = 20,
     ) -> list[RetrievedChunk]:
+
+        # Reranking is enabled simply by the presence of a rerank_service, so the
+        # production path (which wires one in) reranks automatically, while the
+        # eval harness toggles it by constructing the service or not.
+        use_rerank = self.rerank_service is not None
+
+        # When reranking, pull a larger candidate pool from the vector search
+        # (recall), then let the cross-encoder pick the best ``limit`` (precision).
+        search_limit = max(candidate_pool, limit) if use_rerank else limit
 
         embedding = await self.embedding_service.embed_query(query)
 
         points = await self.vector_repository.search(
             embedding,
-            limit,
+            search_limit,
         )
 
         chunk_ids = [
@@ -103,6 +117,13 @@ class RetrievalService:
                     score=point.score,
                     content=chunk.content,
                 )
+            )
+
+        if use_rerank:
+            results = await self.rerank_service.rerank(
+                query,
+                results,
+                top_n=limit,
             )
 
         return results
