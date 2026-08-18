@@ -22,19 +22,23 @@ Handoff enxuto entre sessões. Snapshot detalhado: `docs/development/project-sta
 - Docs atualizados: ADR-007, **ADR-008**, project-state, roadmap, relatório semanal.
 
 ## Pela metade / em aberto
-- **Nada de código pela metade** — working tree limpo; tudo commitado na branch
-  `feat/evaluation-harness` (ainda **sem push**).
+- **Nada de código pela metade** — working tree limpo. Fase 6 mergeada em `main`
+  (PR #2). Neste projeto pode-se commitar direto na `main`.
 - O índice esparso BM25 (`article_chunks_sparse` no Qdrant) existe mas só é usado
   pelo experimento hybrid, que não foi adotado.
 
 ## Próxima tarefa
-Escolher o próximo experimento de qualidade. Candidatos: **chunking sweep**
-(variar `chunk_size`/overlap e reindexar), **query rewriting / HyDE**, prompt
-engineering. Melhoria de metodologia importante: **recall@k com respostas-verdade**
-(a métrica atual é só de precisão) e paralelizar a avaliação de Context Relevance.
+**Chunking sweep** (próximo experimento). Variar `chunk_size`/`overlap` no
+`LlamaIndexChunkingService` (hoje 350/50) — ex. 256/32 e 512/64. Para cada:
+reindexar (apagar chunks/vetores e regerar — corpus de artigos igual, muda só a
+granularidade; re-embeda via Together = custo), correr o harness e comparar no
+leaderboard. Ataca também a context relevance, pela via da preparação dos dados.
+
+A seguir: **query rewriting / HyDE**; e a melhoria de metodologia mais importante,
+**recall@k com respostas-verdade** (a métrica atual é só de precisão).
 
 Backlog anterior: Crawl4AI (JS); normalização de metadados; fila/worker;
-limpeza de vetores órfãos no Qdrant.
+limpeza de vetores órfãos no Qdrant; paralelizar a avaliação de Context Relevance.
 
 ## Como correr a avaliação (dentro do container)
 ```

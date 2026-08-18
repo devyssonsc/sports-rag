@@ -53,6 +53,23 @@ mensurável, sem alterar o comportamento de produção do chat.
     BM25 mete ruído lexical. Fica como capacidade do harness (`index-sparse`).
 -   **Infra:** volume de cache para os modelos ONNX; retry/backoff no harness.
 
+## 18/08/2026
+
+-   **PR #2** (`feat/evaluation-harness` → `main`) aberto e **mergeado**: todo o
+    trabalho da Fase 6 está em `main`.
+-   **Documentação de arquitetura atualizada** (estava desatualizada face ao
+    pipeline novo):
+    -   `architecture.md`: `RetrievalService` agora reflete query-instruct +
+        rerank; nova secção `RerankService`; `fastembed` nas tecnologias;
+        reranking/evaluation saíram de "futuro".
+    -   `data-flow.md`: diagrama e passos 2–3 do pipeline de QA (embed_query com
+        prefixo e5 → pool denso → rerank).
+    -   Novo `backend/evaluation/README.md`: guia estável de como correr
+        experiências e o significado das três métricas.
+-   **Retrospetiva da sessão** e decisão de rumo: o *retrieval puro* dá retornos
+    decrescentes (context relevance limitada pela métrica de precisão); próximo
+    foco em **chunking** e **query rewriting**.
+
 ------------------------------------------------------------------------
 
 # Estado atual
@@ -65,7 +82,16 @@ mensurável, sem alterar o comportamento de produção do chat.
 
 ## Próximos passos
 
-1.  Chunking sweep (variar `chunk_size`/overlap, reindexar) e query rewriting/HyDE.
-2.  Recall@k com respostas-verdade (a métrica atual mede só precisão).
-3.  Paralelizar a avaliação de Context Relevance no harness (reduzir latência).
-4.  (Opcional) juiz distinto do gerador para reduzir enviesamento same-model.
+1.  **Chunking sweep (próximo experimento).** Variar `chunk_size`/`overlap` no
+    `LlamaIndexChunkingService` (hoje 350/50) — ex.: 256/32, 512/64. Para cada
+    configuração: reindexar (chunks + embeddings densos e, se aplicável, o índice
+    esparso), correr o harness e comparar no leaderboard. Requer um passo de
+    reindexação limpa (apagar chunks/vetores e regerar) — o corpus de artigos
+    fica igual; o que muda é a granularidade. Atenção: reindexar re-embeda via
+    Together (custo).
+2.  **Query rewriting / HyDE.** O LLM reescreve/expande a pergunta antes do
+    retrieval; útil sobretudo nas perguntas temáticas.
+3.  **Recall@k com respostas-verdade** — anotar a(s) fonte(s) esperada(s) por
+    pergunta para medir cobertura (a métrica atual mede só precisão).
+4.  Paralelizar a avaliação de Context Relevance no harness (reduzir latência).
+5.  (Opcional) juiz distinto do gerador para reduzir enviesamento same-model.
