@@ -157,10 +157,13 @@ Each vector references its corresponding chunk through metadata.
 User Question
       │
       ▼
-EmbeddingService
+EmbeddingService (embed_query, e5 instruction prefix)
       │
       ▼
-Qdrant Similarity Search
+Qdrant Similarity Search (cosine) ── candidate pool (top-20)
+      │
+      ▼
+RerankService (cross-encoder) ── best top-5
       │
       ▼
 Chunk IDs
@@ -191,13 +194,22 @@ The API receives a natural language question.
 
 ### 2. Query Embedding
 
-The question is converted into a vector representation.
+The question is embedded with `embed_query`, which prefixes the e5 instruction
+(`Instruct: {task}\nQuery: {question}`). Documents are embedded as raw text, so
+the query lands in the "query space" the e5 model was trained on (see ADR-007).
 
 ---
 
-### 3. Similarity Search
+### 3. Similarity Search + Reranking
 
-Qdrant returns the most semantically similar chunks.
+Qdrant returns a candidate pool of the most cosine-similar chunks (top-20). A
+local cross-encoder (`RerankService`) then scores each (question, chunk) pair and
+keeps the best top-5 — retrieve-then-rerank: embeddings for recall, cross-encoder
+for precision (see ADR-008).
+
+The evaluation harness can also run this step as hybrid retrieval (dense + BM25
+fused with RRF) or widen the final chunks with sentence-window neighbours; neither
+is enabled in production.
 
 ---
 
@@ -260,14 +272,13 @@ without requiring the entire pipeline to be redesigned.
 
 # Future Extensions
 
-The current flow is designed to support:
+Reranking and the evaluation pipeline are now implemented; hybrid retrieval and
+sentence-window exist as eval-only capabilities. The current flow is still
+designed to support:
 
 - additional discovery strategies;
 - alternative extraction engines;
-- hybrid retrieval;
-- reranking;
 - metadata filtering;
-- conversational memory;
-- evaluation pipelines.
+- conversational memory.
 
 These capabilities should extend the existing flow rather than replace it whenever possible.

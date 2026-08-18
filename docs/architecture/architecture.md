@@ -297,10 +297,26 @@ Retrieve the most relevant chunks for a user question.
 
 Flow:
 
-1. Generate embedding for the question.
-2. Search similar vectors in Qdrant.
-3. Recover chunk metadata from PostgreSQL.
-4. Return ranked context.
+1. Embed the question with the e5 instruction prefix (`embed_query`).
+2. Search similar vectors in Qdrant (cosine) for a candidate pool.
+3. Rerank the pool with a cross-encoder and keep the best top-k (see
+   RerankService); documents stay in embedding order when reranking is off.
+4. Recover chunk metadata from PostgreSQL.
+5. Return ranked context.
+
+Two optional stages are wired only in the evaluation harness, not in the
+production path: sentence-window neighbour expansion and hybrid dense + BM25
+retrieval (RRF fusion via a sparse Qdrant collection). See ADR-007 / ADR-008.
+
+---
+
+## RerankService
+
+Purpose:
+
+Reorder retrieved candidates by true (query, chunk) relevance, using a local
+cross-encoder (fastembed, ONNX). Enabled in production; the model is loaded once
+(singleton) and cached in a volume. See ADR-008.
 
 ---
 
@@ -413,19 +429,22 @@ This separation allows new discovery mechanisms to be added without changing the
 - Together AI
 - Trafilatura
 - LlamaIndex
+- fastembed (cross-encoder reranking + BM25 sparse, local ONNX)
 
 ---
 
 # Future Evolution
 
-The architecture has been designed to support:
+Implemented since the original design: reranking (ADR-008) and an evaluation
+harness (ADR-007). Hybrid retrieval and sentence-window are implemented but kept
+as eval-only capabilities.
+
+The architecture still supports, as future work:
 
 - additional discovery strategies;
 - alternative embedding models;
 - different LLM providers;
-- hybrid retrieval;
-- reranking;
 - metadata filtering;
-- evaluation pipelines.
+- conversational memory.
 
 These features should be added by extending existing abstractions whenever possible rather than modifying stable components.
