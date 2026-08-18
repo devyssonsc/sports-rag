@@ -11,8 +11,14 @@ services:
     env_file:
       - .env
 
+    environment:
+      # Persist fastembed's ONNX models (reranker, sparse) across container
+      # recreation, so they are downloaded once (see fastembed_cache volume).
+      FASTEMBED_CACHE_PATH: /cache/fastembed
+
     volumes:
       - ./backend:/app
+      - fastembed_cache:/cache/fastembed
 
     command: uvicorn app.main:app --host 0.0.0.0 --reload
 
@@ -53,3 +59,4 @@ services:
 volumes:
   postgres_data:
   qdrant_data:
+  fastembed_cache:

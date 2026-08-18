@@ -14,3 +14,5 @@ lxml
 together
 
 llama-index-core
+
+fastembed

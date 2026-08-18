@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +20,7 @@ from app.services.llama_index_chunking_service import LlamaIndexChunkingService
 from app.services.llm_service import LLMService
 from app.services.news_source_service import NewsSourceService
 from app.services.prompt_builder_service import PromptBuilderService
+from app.services.rerank_service import RerankService
 from app.services.retrieval_service import RetrievalService
 from app.services.text_cleaning_service import TextCleaningService
 from app.services.discovery.factory import DiscoveryFactory
@@ -101,6 +104,13 @@ def get_prompt_builder() -> PromptBuilderService:
     return PromptBuilderService()
 
 
+@lru_cache
+def get_rerank_service() -> RerankService:
+    # Cached as a singleton: the cross-encoder model is loaded once and reused
+    # across requests, not rebuilt per request.
+    return RerankService()
+
+
 # ------------------------------------------------------------------
 # Domain Services
 # ------------------------------------------------------------------
@@ -118,6 +128,9 @@ def get_retrieval_service(
     article_repository: ArticleRepository = Depends(
         get_article_repository
     ),
+    rerank_service: RerankService = Depends(
+        get_rerank_service
+    ),
 ) -> RetrievalService:
 
     return RetrievalService(
@@ -125,6 +138,7 @@ def get_retrieval_service(
         vector_repository,
         chunk_repository,
         article_repository,
+        rerank_service=rerank_service,
     )
 
 

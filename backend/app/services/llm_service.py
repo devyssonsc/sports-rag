@@ -16,7 +16,16 @@ class LLMService:
     async def generate(
         self,
         prompt: str,
+        temperature: float | None = None,
     ) -> str:
+
+        # ``temperature`` is only forwarded when provided, so the default
+        # production behaviour (chat) stays byte-for-byte unchanged. The
+        # evaluation harness passes ``temperature=0`` to make the LLM-as-a-judge
+        # scoring as deterministic as possible.
+        extra: dict = {}
+        if temperature is not None:
+            extra["temperature"] = temperature
 
         response = await self.client.chat.completions.create(
             model=self.MODEL_NAME,
@@ -26,6 +35,7 @@ class LLMService:
                     "content": prompt,
                 }
             ],
+            **extra,
         )
 
         return response.choices[0].message.content
