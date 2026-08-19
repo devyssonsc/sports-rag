@@ -128,6 +128,14 @@ mensurável, sem alterar o comportamento de produção do chat.
     **estrutural** (temáticas precisam de >5 fontes; ~12% dos artigos não casam
     semanticamente). Nota: a ground-truth é conservadora (só as fontes autoradas),
     por isso o recall real é ≥ o medido.
+-   **Juiz independente (ADR-010):** o juiz deixou de ser o gerador (`gpt-oss-120b`)
+    → passou a **`Llama-3.3-70B-Instruct-Turbo`** (serverless, família diferente).
+    Comparação na config e5+rerank (recall âncora 0.758 constante → só o juiz mudou):
+    gpt-oss 0.484/0.989/0.961, Qwen3.5-9B 0.524/**1.000**/1.000 (carimba tudo —
+    9B pouco discriminante), **Llama-70B 0.531/0.9925/1.000** (discrimina, apanha
+    afirmações não suportadas). Modelos de reasoning (QwQ/R1) não são serverless.
+    **Lição:** os valores absolutos dependem do juiz → só comparar com o *mesmo*
+    juiz; o leaderboard passa a **rotular cada linha com o juiz**.
 
 ------------------------------------------------------------------------
 

@@ -33,6 +33,7 @@ def save_run(summary: RunSummary) -> Path:
         "experiment": summary.experiment,
         "timestamp": summary.timestamp,
         "questions": summary.question_count,
+        "judge": summary.judge_model,
         "context_relevance": summary.mean_context_relevance,
         "groundedness": summary.mean_groundedness,
         "answer_relevance": summary.mean_answer_relevance,
@@ -62,19 +63,23 @@ def render_leaderboard(rows: list[dict]) -> str:
     def fmt(value) -> str:
         return "  NaN" if value is None else f"{value:5.3f}"
 
+    def judge_tag(row) -> str:
+        # short label; absolute scores are only comparable within the same judge
+        return (row.get("judge") or "gpt-oss(self)").split("/")[-1][:18]
+
     header = (
-        f"{'experiment':<28} {'ctx.rel':>8} {'ground':>8} "
-        f"{'ans.rel':>8} {'recall':>8} {'lat(s)':>8} {'#q':>4}"
+        f"{'experiment':<24} {'ctx.rel':>8} {'ground':>8} "
+        f"{'ans.rel':>8} {'recall':>8} {'#q':>4}  {'judge':<18}"
     )
     lines = [header, "-" * len(header)]
     for row in rows:
         lines.append(
-            f"{row['experiment']:<28} "
+            f"{row['experiment']:<24} "
             f"{fmt(row.get('context_relevance')):>8} "
             f"{fmt(row.get('groundedness')):>8} "
             f"{fmt(row.get('answer_relevance')):>8} "
             f"{fmt(row.get('recall')):>8} "
-            f"{row.get('latency_s', 0):>8.2f} "
-            f"{row.get('questions', 0):>4}"
+            f"{row.get('questions', 0):>4}  "
+            f"{judge_tag(row):<18}"
         )
     return "\n".join(lines)

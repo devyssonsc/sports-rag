@@ -33,7 +33,7 @@ from app.services.sparse_embedding_service import SparseEmbeddingService
 from evaluation._retry import with_retry
 from evaluation.hyde_service import HydeService
 from evaluation.multi_query_service import MultiQueryService
-from evaluation.judge import RagTriadJudge
+from evaluation.judge import JUDGE_MODEL, RagTriadJudge
 from evaluation.schemas import MetricScore, QuestionResult, RunSummary
 
 GROUND_TRUTH_PATH = Path(__file__).parent / "ground_truth.json"
@@ -75,8 +75,9 @@ async def evaluate(
     embedding_service = EmbeddingService()
     vector_repository = VectorRepository()
     prompt_builder = PromptBuilderService()
-    llm_service = LLMService()
-    judge = RagTriadJudge(llm_service)
+    llm_service = LLMService()  # answer generation (gpt-oss-120b)
+    # Independent reasoning judge — a different model, to avoid same-model bias.
+    judge = RagTriadJudge(LLMService(model=JUDGE_MODEL))
     ground_truth = _load_ground_truth()
 
     # The reranker is independent of the judge model, so context-relevance scores
@@ -196,6 +197,7 @@ def _summarize(experiment: str, results: list[QuestionResult]) -> RunSummary:
         experiment=experiment,
         timestamp=datetime.now(timezone.utc).isoformat(),
         question_count=len(results),
+        judge_model=JUDGE_MODEL,
         mean_context_relevance=_mean_metric(results, "context_relevance"),
         mean_groundedness=_mean_metric(results, "groundedness"),
         mean_answer_relevance=_mean_metric(results, "answer_relevance"),

@@ -135,6 +135,7 @@ async def _run(
 
     print("\n=== RUN SUMMARY ===")
     print(f"experiment        : {summary.experiment}")
+    print(f"judge model       : {summary.judge_model}")
     print(f"context relevance : {_fmt(summary.mean_context_relevance)}")
     print(f"groundedness      : {_fmt(summary.mean_groundedness)}")
     print(f"answer relevance  : {_fmt(summary.mean_answer_relevance)}")

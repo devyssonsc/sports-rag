@@ -14,6 +14,7 @@ is what lets you debug *why* a run scored low, not just *that* it did.
 from __future__ import annotations
 
 import json
+import os
 import re
 from statistics import mean
 
@@ -23,9 +24,14 @@ from evaluation._retry import with_retry
 from evaluation.schemas import MetricScore
 
 
-# Temperature 0 => judging is as deterministic as the provider allows, so the
-# same run is reproducible and experiments stay comparable.
-JUDGE_TEMPERATURE = 0.0
+# The judge is independent from the answer generator (openai/gpt-oss-120b) to
+# avoid same-model bias, and strong enough to discriminate (a 9B judge rated
+# everything 1.0). Llama-3.3-70B is a capable, different-family instruct model.
+# Temperature 0 keeps judging deterministic; if a *reasoning* judge is used
+# instead (which degrades at 0), raise JUDGE_TEMPERATURE (~0.6) via the env var.
+JUDGE_MODEL = os.getenv("JUDGE_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo")
+JUDGE_TEMPERATURE = float(os.getenv("JUDGE_TEMPERATURE", "0.0"))
+JUDGE_MAX_TOKENS = int(os.getenv("JUDGE_MAX_TOKENS", "4096"))
 
 
 _ANSWER_RELEVANCE_PROMPT = """\
@@ -163,6 +169,7 @@ class RagTriadJudge:
             lambda: self.llm_service.generate(
                 prompt,
                 temperature=JUDGE_TEMPERATURE,
+                max_tokens=JUDGE_MAX_TOKENS,
             )
         )
         return _parse_score(raw)
@@ -171,17 +178,22 @@ class RagTriadJudge:
 def _parse_score(raw: str) -> MetricScore:
     """Extract ``{"score": ..., "reason": ...}`` from the judge's reply.
 
-    LLMs sometimes wrap JSON in prose or code fences, so we grab the first
-    balanced-looking object rather than trusting the whole string.
+    Reasoning models emit a ``<think>...</think>`` trace (which can contain braces)
+    before the final answer, and models sometimes wrap JSON in prose/code fences.
+    So we drop the reasoning trace and take the LAST parseable flat JSON object.
     """
-    match = re.search(r"\{.*\}", raw, flags=re.DOTALL)
-    if not match:
-        return MetricScore(score=None, reason=f"Unparseable judge reply: {raw[:200]}")
+    cleaned = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL)
 
-    try:
-        data = json.loads(match.group(0))
-    except json.JSONDecodeError:
-        return MetricScore(score=None, reason=f"Invalid JSON from judge: {raw[:200]}")
+    data = None
+    for candidate in reversed(re.findall(r"\{[^{}]*\}", cleaned, flags=re.DOTALL)):
+        try:
+            data = json.loads(candidate)
+            break
+        except json.JSONDecodeError:
+            continue
+
+    if data is None:
+        return MetricScore(score=None, reason=f"Unparseable judge reply: {raw[:200]}")
 
     score = data.get("score")
     reason = str(data.get("reason", "")).strip()

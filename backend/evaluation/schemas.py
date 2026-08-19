@@ -48,6 +48,7 @@ class RunSummary(BaseModel):
     experiment: str
     timestamp: str
     question_count: int
+    judge_model: str
 
     mean_context_relevance: float | None
     mean_groundedness: float | None

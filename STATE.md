@@ -62,8 +62,16 @@ cobertura marginal que dilui até ao top-5, e a precisão já era pior. Bug corr
 8 experiências; só **e5-instruct + rerank** ganharam. O recall@5 fica preso em ~0.76
 seja qual for a técnica (top10, window, hybrid, jina, HyDE, multi-query) → teto
 **estrutural** (temáticas precisam de >5 fontes; ~12% dos artigos não casam). As
-respostas já são ótimas (groundedness 0.99, answer 0.96). Ground-truth é
-conservadora → recall real ≥ medido.
+respostas já são ótimas. Ground-truth é conservadora → recall real ≥ medido.
+
+## Juiz independente (feito — ADR-010)
+O juiz deixou de ser o gerador (`gpt-oss-120b`) → agora **`Llama-3.3-70B-Instruct-Turbo`**
+(serverless, família diferente, discrimina). `JUDGE_MODEL`/`JUDGE_TEMPERATURE`/
+`JUDGE_MAX_TOKENS` configuráveis; parser aguenta `<think>` (reasoning judge). O
+leaderboard rotula cada linha com o juiz. **Valores absolutos dependem do juiz →
+só comparar com o mesmo juiz**; linhas antigas são da era gpt-oss. e5+rerank com
+Llama: 0.531 / 0.9925 / 1.000 (recall 0.758). Reasoning models (QwQ/R1) não são
+serverless na conta.
 
 ## Próxima tarefa (retorno decrescente no retrieval — opções)
 1. **k adaptativo / corte por score do reranker** — o único lever ainda por testar
