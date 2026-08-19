@@ -52,16 +52,24 @@ pool@20 = 0.883 (vs denso 0.867, +1.6pp) e top-5 = 0.767 (igual ao denso): ganho
 cobertura marginal que dilui até ao top-5, e a precisão já era pior. Bug corrigido:
 `index-sparse` recria a coleção esparsa (acumulava órfãos → KeyError).
 
-## Estratégias de query (a testar com recall@k, grátis via --retrieval-only)
-- **HyDE (feito) — REJEITADO:** recall pior (pool 0.833 vs 0.867). O LLM inventa
-  o hipotético (corpus é notícia recente que ele não conhece) e engana a busca.
-  Fica como capacidade (`--hyde`).
+## Estratégias de query (testadas com recall@k, grátis via --retrieval-only)
+- **HyDE — REJEITADO:** recall pior (pool 0.833). O LLM inventa o hipotético
+  (corpus é notícia recente que ele não conhece). Capacidade `--hyde`.
+- **Multi-query — marginal, não adotado:** pool 0.879 (+1.2pp), top-5 0.758 (igual).
+  Robusto (não piora) mas o ganho dilui-se. Capacidade `--multi-query`.
 
-## Próxima tarefa
-1. **Multi-query (query expansion)** — o LLM gera N reformulações da *pergunta*
-   (não pede factos, ao contrário do HyDE); recupera-se com cada e funde-se (RRF).
-   Medir recall vs baseline (rerank@5 0.758 / pool@20 0.867).
-2. **k adaptativo / corte por score do reranker** — subir a context relevance.
+## Síntese: retrieval está no teto (para este corpus)
+8 experiências; só **e5-instruct + rerank** ganharam. O recall@5 fica preso em ~0.76
+seja qual for a técnica (top10, window, hybrid, jina, HyDE, multi-query) → teto
+**estrutural** (temáticas precisam de >5 fontes; ~12% dos artigos não casam). As
+respostas já são ótimas (groundedness 0.99, answer 0.96). Ground-truth é
+conservadora → recall real ≥ medido.
+
+## Próxima tarefa (retorno decrescente no retrieval — opções)
+1. **k adaptativo / corte por score do reranker** — o único lever ainda por testar
+   na context relevance (devolver menos chunks quando poucos são relevantes).
+2. **Mudar de área:** qualidade da geração (prompt), ou expandir corpus/perguntas,
+   ou melhorar a ground-truth (menos conservadora).
 
 Backlog: Crawl4AI (JS); normalização de metadados; fila/worker; limpeza de vetores
 órfãos; paralelizar a avaliação de Context Relevance. Nota: chunks >512 tokens só

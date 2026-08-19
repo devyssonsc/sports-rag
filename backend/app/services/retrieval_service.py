@@ -20,6 +20,7 @@ class RetrievalService:
         rerank_service=None,
         sparse_embedding_service=None,
         hyde_service=None,
+        multi_query_service=None,
     ):
         self.embedding_service = embedding_service
         self.vector_repository = vector_repository
@@ -34,6 +35,9 @@ class RetrievalService:
         # Optional HyDE query transform. When present, the dense query vector
         # comes from a hypothetical passage instead of the raw question.
         self.hyde_service = hyde_service
+        # Optional multi-query expansion. When present, the query is rephrased
+        # into several variants; their results are fused (RRF).
+        self.multi_query_service = multi_query_service
 
     async def search(
         self,
@@ -68,37 +72,48 @@ class RetrievalService:
         # (recall), then let the cross-encoder pick the best ``limit`` (precision).
         search_limit = max(candidate_pool, limit) if use_rerank else limit
 
-        if self.hyde_service is not None:
-            # HyDE: embed a hypothetical passage instead of the raw question.
-            embedding = await self.hyde_service.embed_query(query)
-        else:
-            embedding = await self.embedding_service.embed_query(query)
+        if self.multi_query_service is not None:
+            # Multi-query: rephrase the question into variants, search each, fuse.
+            variants = await self.multi_query_service.expand(query)
+            point_lists = []
+            for variant in variants:
+                variant_embedding = await self.embedding_service.embed_query(variant)
+                point_lists.append(
+                    await self.vector_repository.search(variant_embedding, search_limit)
+                )
+            ranked = _reciprocal_rank_fusion(point_lists, search_limit)
 
-        if self.sparse_embedding_service is not None:
-            # Hybrid: run dense and sparse searches, fuse their rankings (RRF).
-            dense_points = await self.vector_repository.search(
-                embedding,
-                search_limit,
-            )
-            sparse_indices, sparse_values = (
-                await self.sparse_embedding_service.embed_query(query)
-            )
-            sparse_points = await self.vector_repository.search_sparse(
-                sparse_indices,
-                sparse_values,
-                search_limit,
-            )
-            ranked = _reciprocal_rank_fusion(
-                dense_points,
-                sparse_points,
-                search_limit,
-            )
         else:
-            dense_points = await self.vector_repository.search(
-                embedding,
-                search_limit,
-            )
-            ranked = [(int(point.id), point.score) for point in dense_points]
+            if self.hyde_service is not None:
+                # HyDE: embed a hypothetical passage instead of the raw question.
+                embedding = await self.hyde_service.embed_query(query)
+            else:
+                embedding = await self.embedding_service.embed_query(query)
+
+            if self.sparse_embedding_service is not None:
+                # Hybrid: run dense and sparse searches, fuse their rankings (RRF).
+                dense_points = await self.vector_repository.search(
+                    embedding,
+                    search_limit,
+                )
+                sparse_indices, sparse_values = (
+                    await self.sparse_embedding_service.embed_query(query)
+                )
+                sparse_points = await self.vector_repository.search_sparse(
+                    sparse_indices,
+                    sparse_values,
+                    search_limit,
+                )
+                ranked = _reciprocal_rank_fusion(
+                    [dense_points, sparse_points],
+                    search_limit,
+                )
+            else:
+                dense_points = await self.vector_repository.search(
+                    embedding,
+                    search_limit,
+                )
+                ranked = [(int(point.id), point.score) for point in dense_points]
 
         chunk_ids = [chunk_id for chunk_id, _ in ranked]
 
@@ -208,20 +223,20 @@ class RetrievalService:
 
 
 def _reciprocal_rank_fusion(
-    dense_points,
-    sparse_points,
+    point_lists: list,
     limit: int,
     k: int = 60,
 ) -> list[tuple[int, float]]:
-    """Fuse two ranked result lists with Reciprocal Rank Fusion.
+    """Fuse several ranked result lists with Reciprocal Rank Fusion.
 
     Each list contributes 1/(k + rank) per chunk; scores are summed across lists,
-    so a chunk ranked well by either dense or sparse retrieval rises. Returns the
-    top ``limit`` as (chunk_id, fused_score).
+    so a chunk ranked well by any list rises. Used for hybrid (dense + sparse) and
+    multi-query (one list per query variant). Returns the top ``limit`` as
+    (chunk_id, fused_score).
     """
     scores: dict[int, float] = {}
 
-    for points in (dense_points, sparse_points):
+    for points in point_lists:
         for rank, point in enumerate(points):
             chunk_id = int(point.id)
             scores[chunk_id] = scores.get(chunk_id, 0.0) + 1.0 / (k + rank + 1)

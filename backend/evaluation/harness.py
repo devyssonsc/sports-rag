@@ -32,6 +32,7 @@ from app.services.sparse_embedding_service import SparseEmbeddingService
 
 from evaluation._retry import with_retry
 from evaluation.hyde_service import HydeService
+from evaluation.multi_query_service import MultiQueryService
 from evaluation.judge import RagTriadJudge
 from evaluation.schemas import MetricScore, QuestionResult, RunSummary
 
@@ -66,6 +67,7 @@ async def evaluate(
     window: int = 0,
     hybrid: bool = False,
     hyde: bool = False,
+    multi_query: bool = False,
     retrieval_only: bool = False,
 ) -> RunSummary:
     """Run the whole question set through the pipeline and score it."""
@@ -82,6 +84,7 @@ async def evaluate(
     rerank_service = RerankService() if rerank else None
     sparse_embedding_service = SparseEmbeddingService() if hybrid else None
     hyde_service = HydeService(llm_service, embedding_service) if hyde else None
+    multi_query_service = MultiQueryService(llm_service) if multi_query else None
 
     results: list[QuestionResult] = []
 
@@ -94,6 +97,7 @@ async def evaluate(
             rerank_service=rerank_service,
             sparse_embedding_service=sparse_embedding_service,
             hyde_service=hyde_service,
+            multi_query_service=multi_query_service,
         )
 
         for index, question in enumerate(questions, start=1):

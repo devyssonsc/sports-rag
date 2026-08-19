@@ -118,6 +118,16 @@ mensurável, sem alterar o comportamento de produção do chat.
     modelo não conhece** → o hipotético aluciná e engana a busca. Fica como
     capacidade do harness (`--hyde`). Próximo: **multi-query**, que reformula a
     *pergunta* (não pede factos ao modelo) → deve ser robusto onde o HyDE falhou.
+-   **Multi-query (query expansion) — marginal, não adotado:** o LLM gera N
+    reformulações da pergunta; recupera-se com cada e funde-se (RRF). Como previsto,
+    **robusto** (não piorou, ao contrário do HyDE), mas o ganho é marginal:
+    pool@20 = 0.879 (+1.2pp) e top-5 = 0.758 (igual). O ganho de cobertura dilui-se
+    até ao top-5 (mesmo padrão do hybrid). Fica como capacidade (`--multi-query`).
+    **Síntese:** 8 experiências de retrieval; só e5-instruct e rerank ganharam. O
+    recall no top-5 fica preso em ~0.76 seja qual for a técnica → o teto é
+    **estrutural** (temáticas precisam de >5 fontes; ~12% dos artigos não casam
+    semanticamente). Nota: a ground-truth é conservadora (só as fontes autoradas),
+    por isso o recall real é ≥ o medido.
 
 ------------------------------------------------------------------------
 

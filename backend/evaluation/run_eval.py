@@ -83,6 +83,7 @@ async def _run(
     window: int,
     hybrid: bool,
     hyde: bool,
+    multi_query: bool,
     retrieval_only: bool,
 ) -> None:
     from app.database.postgres import SessionLocal
@@ -112,6 +113,8 @@ async def _run(
         mode += f", window ±{window}"
     if hyde:
         mode += ", HyDE"
+    if multi_query:
+        mode += ", multi-query"
     if retrieval_only:
         mode += ", retrieval-only (no judge)"
     print(f"\nRunning experiment '{experiment}' over {len(questions)} questions ({mode})...\n")
@@ -125,6 +128,7 @@ async def _run(
         window=window,
         hybrid=hybrid,
         hyde=hyde,
+        multi_query=multi_query,
         retrieval_only=retrieval_only,
     )
     detail_path = save_run(summary)
@@ -314,6 +318,11 @@ def main() -> None:
         help="HyDE: embed a hypothetical LLM-written passage instead of the raw query.",
     )
     run_parser.add_argument(
+        "--multi-query",
+        action="store_true",
+        help="Multi-query: rephrase into variants, search each, fuse (RRF).",
+    )
+    run_parser.add_argument(
         "--retrieval-only",
         action="store_true",
         help="Skip generation + triad judging; compute only recall@k. "
@@ -358,6 +367,7 @@ def main() -> None:
             args.window,
             args.hybrid,
             args.hyde,
+            args.multi_query,
             args.retrieval_only,
         ))
     elif args.command == "index-sparse":
