@@ -80,15 +80,28 @@ só comparar com o mesmo juiz**; linhas antigas são da era gpt-oss. e5+rerank c
 Llama: 0.531 / 0.9925 / 1.000 (recall 0.758). Reasoning models (QwQ/R1) não são
 serverless na conta.
 
-## Próxima tarefa (retorno decrescente no retrieval — opções)
-1. **k adaptativo / corte por score do reranker** — o único lever ainda por testar
-   na context relevance (devolver menos chunks quando poucos são relevantes).
-2. **Mudar de área:** qualidade da geração (prompt), ou expandir corpus/perguntas,
-   ou melhorar a ground-truth (menos conservadora).
+## Próxima tarefa: prompt engineering (qualidade da resposta no /chat)
+Mudança de área — do retrieval (no teto) para a **geração**. Objetivo: melhorar a
+qualidade das respostas finais do `/chat` só mexendo no prompt.
 
-Backlog: Crawl4AI (JS); normalização de metadados; fila/worker; limpeza de vetores
-órfãos; paralelizar a avaliação de Context Relevance. Nota: chunks >512 tokens só
-com outro modelo de embeddings de contexto longo (ver ADR-009).
+- **Onde:** `backend/app/services/prompt_builder_service.py` (o `PromptBuilderService.build`
+  monta contexto + instruções). Não mexer no retrieval.
+- **Como medir:** `run -e <nome> --rerank` (a config de produção). **Não precisa de
+  reindex** (o retrieval não muda). Juiz = Llama (default). Comparar com o baseline
+  Llama: **rerank 0.532 / 0.980 / 1.000** (context / groundedness / answer).
+- **Técnicas a testar:** instruções mais claras, few-shot, citações/atribuição de
+  fontes, síntese multi-fonte (temáticas), formato, e melhor tratamento de
+  "informação indisponível".
+- **⚠️ Cuidado (importante):** sob o juiz Llama, **answer relevance = 1.000 e
+  groundedness = 0.98** já estão quase no teto — as métricas atuais podem estar
+  **saturadas** e não captar melhorias de qualidade (concisão, citações, clareza).
+  Considerar: perguntas mais difíceis/adversariais, ou uma métrica nova (ex.:
+  presença de citações, ou um juiz para qualidade de escrita). Sem isso, os deltas
+  serão pequenos.
+
+Backlog: k adaptativo/corte por score do reranker; expandir corpus/perguntas;
+ground-truth menos conservadora; Crawl4AI (JS); normalização de metadados;
+fila/worker; limpeza de vetores órfãos; paralelizar a avaliação de Context Relevance.
 
 ## Como correr a avaliação (dentro do container)
 ```
