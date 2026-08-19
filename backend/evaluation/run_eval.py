@@ -155,6 +155,10 @@ async def _index_sparse() -> None:
     if not chunks:
         raise SystemExit("No chunks found. Ingest a corpus first.")
 
+    # Clear first: after a reindex the chunk ids change, so a plain upsert would
+    # leave orphaned points from earlier generations.
+    await vector_repository.recreate_sparse_collection()
+
     print(f"Indexing {len(chunks)} chunks into the BM25 sparse collection...")
 
     embeddings = await sparse_service.embed_documents(

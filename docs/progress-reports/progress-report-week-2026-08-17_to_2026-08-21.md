@@ -101,8 +101,15 @@ mensurável, sem alterar o comportamento de produção do chat.
     reindexes), métrica **determinística** (sem LLM) e modo **`--retrieval-only`**
     (rápido/grátis). Diagnóstico (produção e5): **pool@20 = 0.87**, denso@5 = 0.77,
     **rerank@5 = 0.76**. Revela que ~13% dos artigos-fonte nem entram no top-20, e
-    que o rerank troca ~0.01 de recall por precisão. Reabre a questão do **hybrid**
-    (rejeitado na precisão, mas pode ganhar no recall).
+    que o rerank troca ~0.01 de recall por precisão. Reabriu a questão do **hybrid**
+    (rejeitado na precisão, mas talvez ganhasse no recall).
+-   **Hybrid re-medido pela lente do recall — continua rejeitado (agora nos dois
+    eixos):** pool@20 = 0.883 (vs denso 0.867, só +1.6pp) e top-5 = 0.767 (igual ao
+    denso). O ganho de cobertura do BM25 é marginal e dilui-se até ao top-5; e a
+    precisão já era pior. O verdadeiro buraco (~12–13% das fontes fora do pool@20)
+    pede **query rewriting**, não hybrid. Corrigido de passagem um bug: o
+    `index-sparse` acumulava pontos órfãos (recria a coleção antes do backfill) +
+    guarda no retrieval para ignorar chunk_ids inexistentes.
 
 ------------------------------------------------------------------------
 
@@ -118,9 +125,8 @@ mensurável, sem alterar o comportamento de produção do chat.
 
 ## Próximos passos
 
-1.  **Re-medir o hybrid com o recall** (após `index-sparse`): o BM25 pode melhorar
-    a cobertura mesmo tendo baixado a precisão — foi rejeitado com metade da imagem.
-2.  **Query rewriting / HyDE** — para os ~13% de fontes que nem entram no pool@20.
-3.  **k adaptativo / corte por score do reranker** — subir a context relevance
+1.  **Query rewriting / HyDE** — o lever certo para os ~12–13% de fontes que nem
+    entram no pool@20 (o hybrid já se confirmou insuficiente aí).
+2.  **k adaptativo / corte por score do reranker** — subir a context relevance
     devolvendo menos chunks quando poucos são relevantes.
-4.  Paralelizar a avaliação de Context Relevance no harness (reduzir latência).
+3.  Paralelizar a avaliação de Context Relevance no harness (reduzir latência).

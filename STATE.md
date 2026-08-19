@@ -47,13 +47,15 @@ determinística sem LLM, modo `--retrieval-only` (grátis). Produção e5: pool@
 denso@5 = 0.77, **rerank@5 = 0.76**. ~13% das fontes nem entram no top-20; o rerank
 troca ~0.01 de recall por precisão.
 
+## Hybrid re-medido pelo recall (feito) — continua rejeitado
+pool@20 = 0.883 (vs denso 0.867, +1.6pp) e top-5 = 0.767 (igual ao denso): ganho de
+cobertura marginal que dilui até ao top-5, e a precisão já era pior. Bug corrigido:
+`index-sparse` recria a coleção esparsa (acumulava órfãos → KeyError).
+
 ## Próxima tarefa
-1. **Re-medir o hybrid com o recall** (o insight que o recall desbloqueou): o BM25
-   foi rejeitado por baixar a *precisão*, mas pode subir a *cobertura*. Passos:
-   `index-sparse` (o índice esparso está stale após os reindexes) →
-   `run -e recall-hybrid --hybrid --retrieval-only` → comparar recall com rerank@5 (0.76).
-2. **Query rewriting / HyDE** — para os ~13% de fontes fora do pool@20.
-3. **k adaptativo / corte por score do reranker** — subir a context relevance.
+1. **Query rewriting / HyDE** — o lever certo para os ~12–13% de fontes que nem
+   entram no pool@20 (o hybrid confirmou-se insuficiente).
+2. **k adaptativo / corte por score do reranker** — subir a context relevance.
 
 Backlog: Crawl4AI (JS); normalização de metadados; fila/worker; limpeza de vetores
 órfãos; paralelizar a avaliação de Context Relevance. Nota: chunks >512 tokens só

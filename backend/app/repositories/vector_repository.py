@@ -134,6 +134,26 @@ class VectorRepository:
 
         self._sparse_collection_ready = True
 
+    async def recreate_sparse_collection(self) -> None:
+        """Drop and recreate the sparse collection (clears all points).
+
+        Backfilling must start from empty: after a reindex the chunk ids change,
+        so leftover points would reference chunks that no longer exist.
+        """
+        try:
+            await self.client.delete_collection(self.SPARSE_COLLECTION_NAME)
+        except UnexpectedResponse:
+            pass
+
+        await self.client.create_collection(
+            collection_name=self.SPARSE_COLLECTION_NAME,
+            vectors_config={},
+            sparse_vectors_config={
+                self.SPARSE_VECTOR_NAME: SparseVectorParams(),
+            },
+        )
+        self._sparse_collection_ready = True
+
     async def upsert_sparse_embedding(
         self,
         chunk_id: int,

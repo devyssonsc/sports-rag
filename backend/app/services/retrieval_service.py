@@ -123,7 +123,12 @@ class RetrievalService:
 
         for chunk_id, score in ranked:
 
-            chunk = chunk_map[chunk_id]
+            # A ranked id may be missing if an index is stale (e.g. the sparse
+            # collection references chunks removed by a reindex). Skip it rather
+            # than fail the whole query.
+            chunk = chunk_map.get(chunk_id)
+            if chunk is None:
+                continue
 
             article = article_map[
                 chunk.article_id
