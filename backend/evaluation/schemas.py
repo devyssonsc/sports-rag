@@ -29,6 +29,14 @@ class QuestionResult(BaseModel):
     groundedness: MetricScore
     answer_relevance: MetricScore
 
+    # Retrieval recall@k against the ground-truth article ids (None when the
+    # question has no ground-truth entry). This is deterministic — no LLM — and
+    # measures coverage (did we retrieve the right articles?), unlike the
+    # precision-oriented Context Relevance.
+    recall: float | None
+    retrieved_article_ids: list[int]
+    ground_truth_article_ids: list[int]
+
 
 class RunSummary(BaseModel):
     """The leaderboard row for one experiment run.
@@ -44,6 +52,7 @@ class RunSummary(BaseModel):
     mean_context_relevance: float | None
     mean_groundedness: float | None
     mean_answer_relevance: float | None
+    mean_recall: float | None
 
     mean_latency_seconds: float
 

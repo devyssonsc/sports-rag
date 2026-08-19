@@ -41,11 +41,19 @@ Handoff enxuto entre sessões. Snapshot detalhado: `docs/development/project-sta
 embeddings **e5-large-instruct** (prefixo instruct na query) → busca densa (cosseno)
 top-20 → **rerank** cross-encoder local → top-5. É a melhor config medida.
 
+## Recall@k (feito nesta sessão)
+Harness ganhou **recall@k** (cobertura): `ground_truth.json` (article_ids), métrica
+determinística sem LLM, modo `--retrieval-only` (grátis). Produção e5: pool@20 = 0.87,
+denso@5 = 0.77, **rerank@5 = 0.76**. ~13% das fontes nem entram no top-20; o rerank
+troca ~0.01 de recall por precisão.
+
 ## Próxima tarefa
-1. **Recall@k com respostas-verdade** — anotar a(s) fonte(s) esperada(s) por
-   pergunta; a métrica atual (context relevance) mede só precisão, não cobertura.
-   Foi o que fez top10/hybrid/jina-grande "parecerem" fracos.
-2. **Query rewriting / HyDE** — o LLM reescreve/expande a pergunta antes do retrieval.
+1. **Re-medir o hybrid com o recall** (o insight que o recall desbloqueou): o BM25
+   foi rejeitado por baixar a *precisão*, mas pode subir a *cobertura*. Passos:
+   `index-sparse` (o índice esparso está stale após os reindexes) →
+   `run -e recall-hybrid --hybrid --retrieval-only` → comparar recall com rerank@5 (0.76).
+2. **Query rewriting / HyDE** — para os ~13% de fontes fora do pool@20.
+3. **k adaptativo / corte por score do reranker** — subir a context relevance.
 
 Backlog: Crawl4AI (JS); normalização de metadados; fila/worker; limpeza de vetores
 órfãos; paralelizar a avaliação de Context Relevance. Nota: chunks >512 tokens só

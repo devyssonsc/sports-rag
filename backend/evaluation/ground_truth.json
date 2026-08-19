@@ -1,0 +1,25 @@
+{
+  "_comment": "Ground-truth article ids per question, for recall@k. Keyed by exact question text (must match questions.txt). Article ids are stable across reindexes (articles are untouched); chunk ids are not. These are the authored/canonical source articles — a conservative set: other articles may also answer, so measured recall is a lower bound on true recall.",
+
+  "What stake in Liverpool is Jeff Bezos's consortium in talks to buy?": [44],
+  "Which club had a bid for Monaco midfielder Lamine Camara rejected, and roughly how much was the offer?": [23],
+  "What claim did a Turkish researcher make about Mohamed Salah's family origins?": [339],
+  "Which club did Georgia Stanway join, and what tattoo did she get to mark the move?": [40],
+  "What did Alessandro Costacurta say about AC Milan's summer signings?": [379],
+  "Why will Cristiano Ronaldo miss the start of Al-Nassr's season?": [122],
+  "Who was appointed to referee the 2026 European Super Cup, and why was his selection notable?": [250],
+  "Until when did Real Madrid extend Vinicius Junior's contract?": [283],
+  "Which club did Youri Tielemans join, and through what release clause?": [84],
+  "Which young Ecuadorian full-back joined Barcelona Atletic, and from which club?": [365],
+  "Which Austin FC player topped the goalscoring charts in the Leagues Cup?": [263],
+  "What record did Wrexham achieve with three successive promotions?": [490],
+  "Which Genk defender is AC Milan targeting, and what is Genk's asking price?": [171],
+  "Which shirt number did Dean Huijsen choose at Real Madrid, and which legend inspired it?": [375],
+
+  "What are the main storylines in Real Madrid's summer transfer window?": [436, 390, 283, 375],
+  "How are American owners and investors involved in football according to recent news?": [44, 490, 94],
+  "What are the key talking points heading into the 2026/27 EFL Championship season?": [30, 490, 94],
+  "What incoming and outgoing transfer moves is Barcelona working on this summer?": [384, 365],
+  "What do we know about the 2026 UEFA Super Cup: the teams, their form, and who is officiating?": [180, 250],
+  "How has Aston Villa featured in this summer's transfer news?": [84, 436, 180]
+}

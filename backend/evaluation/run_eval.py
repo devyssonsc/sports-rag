@@ -82,6 +82,7 @@ async def _run(
     candidate_pool: int,
     window: int,
     hybrid: bool,
+    retrieval_only: bool,
 ) -> None:
     from app.database.postgres import SessionLocal
     from evaluation import corpus
@@ -108,6 +109,8 @@ async def _run(
         mode += f", rerank from {candidate_pool}"
     if window:
         mode += f", window ±{window}"
+    if retrieval_only:
+        mode += ", retrieval-only (no LLM)"
     print(f"\nRunning experiment '{experiment}' over {len(questions)} questions ({mode})...\n")
 
     summary = await evaluate(
@@ -118,6 +121,7 @@ async def _run(
         candidate_pool=candidate_pool,
         window=window,
         hybrid=hybrid,
+        retrieval_only=retrieval_only,
     )
     detail_path = save_run(summary)
 
@@ -126,6 +130,7 @@ async def _run(
     print(f"context relevance : {_fmt(summary.mean_context_relevance)}")
     print(f"groundedness      : {_fmt(summary.mean_groundedness)}")
     print(f"answer relevance  : {_fmt(summary.mean_answer_relevance)}")
+    print(f"recall@k          : {_fmt(summary.mean_recall)}")
     print(f"mean latency (s)  : {summary.mean_latency_seconds}")
     print(f"detail written to : {detail_path}")
 
@@ -295,6 +300,11 @@ def main() -> None:
         action="store_true",
         help="Hybrid retrieval: fuse dense + BM25 sparse (needs 'index-sparse').",
     )
+    run_parser.add_argument(
+        "--retrieval-only",
+        action="store_true",
+        help="Skip the LLM (generation + triad); compute only recall@k. Fast/free.",
+    )
 
     sub.add_parser(
         "index-sparse",
@@ -333,6 +343,7 @@ def main() -> None:
             args.candidates,
             args.window,
             args.hybrid,
+            args.retrieval_only,
         ))
     elif args.command == "index-sparse":
         asyncio.run(_index_sparse())
