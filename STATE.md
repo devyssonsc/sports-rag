@@ -52,9 +52,15 @@ pool@20 = 0.883 (vs denso 0.867, +1.6pp) e top-5 = 0.767 (igual ao denso): ganho
 cobertura marginal que dilui até ao top-5, e a precisão já era pior. Bug corrigido:
 `index-sparse` recria a coleção esparsa (acumulava órfãos → KeyError).
 
+## Estratégias de query (a testar com recall@k, grátis via --retrieval-only)
+- **HyDE (feito) — REJEITADO:** recall pior (pool 0.833 vs 0.867). O LLM inventa
+  o hipotético (corpus é notícia recente que ele não conhece) e engana a busca.
+  Fica como capacidade (`--hyde`).
+
 ## Próxima tarefa
-1. **Query rewriting / HyDE** — o lever certo para os ~12–13% de fontes que nem
-   entram no pool@20 (o hybrid confirmou-se insuficiente).
+1. **Multi-query (query expansion)** — o LLM gera N reformulações da *pergunta*
+   (não pede factos, ao contrário do HyDE); recupera-se com cada e funde-se (RRF).
+   Medir recall vs baseline (rerank@5 0.758 / pool@20 0.867).
 2. **k adaptativo / corte por score do reranker** — subir a context relevance.
 
 Backlog: Crawl4AI (JS); normalização de metadados; fila/worker; limpeza de vetores

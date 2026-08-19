@@ -82,6 +82,7 @@ async def _run(
     candidate_pool: int,
     window: int,
     hybrid: bool,
+    hyde: bool,
     retrieval_only: bool,
 ) -> None:
     from app.database.postgres import SessionLocal
@@ -109,8 +110,10 @@ async def _run(
         mode += f", rerank from {candidate_pool}"
     if window:
         mode += f", window ±{window}"
+    if hyde:
+        mode += ", HyDE"
     if retrieval_only:
-        mode += ", retrieval-only (no LLM)"
+        mode += ", retrieval-only (no judge)"
     print(f"\nRunning experiment '{experiment}' over {len(questions)} questions ({mode})...\n")
 
     summary = await evaluate(
@@ -121,6 +124,7 @@ async def _run(
         candidate_pool=candidate_pool,
         window=window,
         hybrid=hybrid,
+        hyde=hyde,
         retrieval_only=retrieval_only,
     )
     detail_path = save_run(summary)
@@ -305,9 +309,15 @@ def main() -> None:
         help="Hybrid retrieval: fuse dense + BM25 sparse (needs 'index-sparse').",
     )
     run_parser.add_argument(
+        "--hyde",
+        action="store_true",
+        help="HyDE: embed a hypothetical LLM-written passage instead of the raw query.",
+    )
+    run_parser.add_argument(
         "--retrieval-only",
         action="store_true",
-        help="Skip the LLM (generation + triad); compute only recall@k. Fast/free.",
+        help="Skip generation + triad judging; compute only recall@k. "
+             "(HyDE still calls the LLM to build the query.)",
     )
 
     sub.add_parser(
@@ -347,6 +357,7 @@ def main() -> None:
             args.candidates,
             args.window,
             args.hybrid,
+            args.hyde,
             args.retrieval_only,
         ))
     elif args.command == "index-sparse":

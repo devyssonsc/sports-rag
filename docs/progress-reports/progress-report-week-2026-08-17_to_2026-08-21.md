@@ -110,6 +110,14 @@ mensurável, sem alterar o comportamento de produção do chat.
     pede **query rewriting**, não hybrid. Corrigido de passagem um bug: o
     `index-sparse` acumulava pontos órfãos (recria a coleção antes do backfill) +
     guarda no retrieval para ignorar chunk_ids inexistentes.
+-   **HyDE (query transform) — REJEITADO:** o LLM gera um documento hipotético e
+    embute-se esse (lado documento) em vez da pergunta. Resultado: recall **pior**
+    (pool@20 0.833 vs 0.867; top-5 0.742 vs 0.758). Motivo, com exemplo real: para
+    "Tielemans → que clube?", o modelo inventou "Royal Antwerp, €15M, do Leicester"
+    (verdade: Man Utd, £35M, do Aston Villa). O corpus é notícia **recente que o
+    modelo não conhece** → o hipotético aluciná e engana a busca. Fica como
+    capacidade do harness (`--hyde`). Próximo: **multi-query**, que reformula a
+    *pergunta* (não pede factos ao modelo) → deve ser robusto onde o HyDE falhou.
 
 ------------------------------------------------------------------------
 
@@ -125,8 +133,9 @@ mensurável, sem alterar o comportamento de produção do chat.
 
 ## Próximos passos
 
-1.  **Query rewriting / HyDE** — o lever certo para os ~12–13% de fontes que nem
-    entram no pool@20 (o hybrid já se confirmou insuficiente aí).
+1.  **Multi-query (query expansion)** — o LLM gera N reformulações da *pergunta*;
+    recupera-se com cada e fundem-se (RRF). Não pede factos ao modelo (ao contrário
+    do HyDE), por isso deve ajudar as temáticas / o recall.
 2.  **k adaptativo / corte por score do reranker** — subir a context relevance
     devolvendo menos chunks quando poucos são relevantes.
 3.  Paralelizar a avaliação de Context Relevance no harness (reduzir latência).

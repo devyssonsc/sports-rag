@@ -19,6 +19,7 @@ class RetrievalService:
         article_repository: ArticleRepository,
         rerank_service=None,
         sparse_embedding_service=None,
+        hyde_service=None,
     ):
         self.embedding_service = embedding_service
         self.vector_repository = vector_repository
@@ -30,6 +31,9 @@ class RetrievalService:
         # Optional BM25 sparse embedder. Its presence turns retrieval hybrid
         # (dense + sparse fused with RRF).
         self.sparse_embedding_service = sparse_embedding_service
+        # Optional HyDE query transform. When present, the dense query vector
+        # comes from a hypothetical passage instead of the raw question.
+        self.hyde_service = hyde_service
 
     async def search(
         self,
@@ -64,7 +68,11 @@ class RetrievalService:
         # (recall), then let the cross-encoder pick the best ``limit`` (precision).
         search_limit = max(candidate_pool, limit) if use_rerank else limit
 
-        embedding = await self.embedding_service.embed_query(query)
+        if self.hyde_service is not None:
+            # HyDE: embed a hypothetical passage instead of the raw question.
+            embedding = await self.hyde_service.embed_query(query)
+        else:
+            embedding = await self.embedding_service.embed_query(query)
 
         if self.sparse_embedding_service is not None:
             # Hybrid: run dense and sparse searches, fuse their rankings (RRF).
