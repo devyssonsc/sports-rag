@@ -136,6 +136,16 @@ mensurável, sem alterar o comportamento de produção do chat.
     afirmações não suportadas). Modelos de reasoning (QwQ/R1) não são serverless.
     **Lição:** os valores absolutos dependem do juiz → só comparar com o *mesmo*
     juiz; o leaderboard passa a **rotular cada linha com o juiz**.
+-   **Re-baseline dos configs-chave sob o juiz Llama** (leaderboard coerente):
+    dense 0.541/0.930, rerank 0.532/0.980, window 0.550/0.983, hybrid 0.513/0.978.
+    Dois achados: **(1)** o valor do rerank é a **groundedness** (0.93→0.98), não a
+    context relevance; **(2) 🔄 o veredito do sentence-window MUDOU** — com o juiz
+    gpt-oss baixava a groundedness (rejeitado), com o Llama **não baixa** (é neutro/
+    ligeiramente melhor) → o "penalty" era artefacto do juiz fraco. Produção fica em
+    `rerank` (window é opção neutra, mas custa latência). Hybrid continua o pior.
+-   **Documento consolidado** de avaliação/benchmark: `docs/development/evaluation-results.md`
+    (metodologia, log completo de experiências, análise de recall e de juízes,
+    leaderboards por juiz, conclusões, índice de ADRs 007–010).
 
 ------------------------------------------------------------------------
 

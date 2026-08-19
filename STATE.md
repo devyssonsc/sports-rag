@@ -64,6 +64,13 @@ seja qual for a técnica (top10, window, hybrid, jina, HyDE, multi-query) → te
 **estrutural** (temáticas precisam de >5 fontes; ~12% dos artigos não casam). As
 respostas já são ótimas. Ground-truth é conservadora → recall real ≥ medido.
 
+## Leaderboard coerente sob o juiz Llama (re-baseline feito)
+dense 0.541/0.930, **rerank 0.532/0.980** (produção), window 0.550/0.983, hybrid
+0.513/0.978 (recall dense 0.771, restantes ~0.75). Achados: o valor do rerank é a
+**groundedness** (0.93→0.98), não a precisão; e o **veredito do window mudou** — com
+o juiz forte já não baixa a groundedness (era artefacto do gpt-oss). Documento
+consolidado: `docs/development/evaluation-results.md`.
+
 ## Juiz independente (feito — ADR-010)
 O juiz deixou de ser o gerador (`gpt-oss-120b`) → agora **`Llama-3.3-70B-Instruct-Turbo`**
 (serverless, família diferente, discrimina). `JUDGE_MODEL`/`JUDGE_TEMPERATURE`/
