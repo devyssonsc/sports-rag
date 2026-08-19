@@ -18,7 +18,7 @@ Sports-RAG/
 ├── alembic/
 ├── tests/
 ├── docs/
-├── CODEX.md
+├── CLAUDE.md
 └── README.md
 ```
 
@@ -39,11 +39,12 @@ Contains:
 
 ---
 
-## CODEX.md
+## CLAUDE.md
 
 Defines how AI agents should collaborate on this repository.
 
-It is the operational constitution for AI-assisted development.
+It is the operational constitution for AI-assisted development, auto-loaded by
+Claude Code every session.
 
 ---
 

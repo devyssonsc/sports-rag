@@ -14,7 +14,7 @@ Instead, follow the steps below exactly.
 
 Read:
 
-- `CODEX.md`
+- `CLAUDE.md`
 
 This document defines:
 

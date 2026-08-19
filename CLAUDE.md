@@ -1,10 +1,13 @@
-# CODEX.md
+# CLAUDE.md — Sports RAG AI Development Constitution
 
-# Sports RAG – AI Development Constitution
+> Auto-loaded by Claude Code. This is the project's development constitution for
+> any AI agent (Claude, Codex, ChatGPT, Gemini or similar) — the filename is
+> `CLAUDE.md` so Claude Code loads it every session.
 
 ## Purpose
 
-This document defines how AI agents (Codex, ChatGPT, Claude, Gemini or similar) must collaborate during the development of the Sports RAG project.
+This document defines how AI agents must collaborate during the development of the
+Sports RAG project.
 
 It is not a description of the project itself. Instead, it defines the expected behaviour of the AI assistant and the mandatory development workflow.
 
@@ -138,25 +141,43 @@ Respect this organization unless a justified architectural change is approved.
 
 # Documentation
 
-Documentation is part of the implementation.
+Documentation is part of the implementation — never skip it when a change affects it.
 
-Whenever a relevant feature is completed, update or propose updates for:
+## Which document, when
 
-- Development Log
-- Project History
-- Architecture documentation
-- Roadmap
-- ADRs
+- **ADR** (`docs/decisions/ADR-NNN-kebab-title.md`) — one per architectural or
+  technical decision. Use the next sequential number. Structure: Status / Date /
+  Decision Makers → Context → Decision → Rationale → Alternatives Considered →
+  Consequences → Future Review.
+- **Progress report**
+  (`docs/progress-reports/progress-report-week-YYYY-MM-DD_to_YYYY-MM-DD.md`) —
+  weekly. Append a `## DD/MM/YYYY` entry per working day; keep its
+  "Estado atual / Próximos passos" section current.
+- **`docs/development/project-state.md`** — current-state snapshot. Update a
+  feature's status (🟢/🟡) when it changes. Source of truth for "what exists now".
+- **`docs/development/roadmap.md`** — only when the long-term direction changes.
+- **`STATE.md`** (root) — the lean session handoff; rewrite each session
+  (Concluído / Pela metade / Próxima tarefa).
+- **`docs/development/evaluation-results.md`** — evaluation / benchmark results log.
+- **Project history** (`docs/project-history/`) — append when a major transition
+  completes.
+
+## Conventions
+
+- **Language:** reference / decision docs (ADRs, architecture, project-state,
+  roadmap, README, evaluation-results) in **English**; the working logs
+  (progress reports, `STATE.md`) in **Portuguese**.
+- Cross-link decisions to their ADR number.
+- Prefer updating an existing document over creating a new one.
 
 ---
 
 # Commits
 
-Commits should be small and focused.
-
-Each commit should represent a single responsibility.
-
-Always suggest a commit message after a feature is completed.
+Small and focused — one responsibility each. Conventional style
+(`feat` / `fix` / `docs` / `chore(scope): …`). Always suggest a commit message
+after a feature is completed. Committing straight to `main` is allowed. Never add
+a Claude/Anthropic `Co-Authored-By` trailer (enforced by the commit-msg hook).
 
 ---
 
