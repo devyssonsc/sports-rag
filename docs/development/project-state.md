@@ -133,6 +133,10 @@ Implemented
   e5 instruction (`Instruct: {task}\nQuery: {text}`). This alignment was
   validated by the evaluation harness (see Evaluation) and improved retrieval.
 
+Note: `multilingual-e5-large-instruct` caps inputs at 512 tokens, so chunk size is
+bounded. A local long-context alternative (jina, 8192 tokens) was evaluated and
+rejected (weaker retrieval; larger chunks did not help) — see ADR-009.
+
 ---
 
 ## Vector Database

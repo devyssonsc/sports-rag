@@ -13,22 +13,6 @@ class LlamaIndexChunkingService:
             chunk_overlap=chunk_overlap,
         )
 
-    # def split(
-    #     self,
-    #     text: str,
-    # ) -> list[str]:
-
-    #     document = Document(text=text)
-
-    #     nodes = self.splitter.get_nodes_from_documents(
-    #         [document]
-    #     )
-
-    #     return [
-    #         node.text
-    #         for node in nodes
-    #     ]
-        
     def split(
         self,
         text: str,
@@ -37,13 +21,5 @@ class LlamaIndexChunkingService:
         document = Document(text=text)
 
         nodes = self.splitter.get_nodes_from_documents([document])
-
-        print(f"Chunks: {len(nodes)}")
-
-        for i, node in enumerate(nodes):
-            print(
-                f"{i}: chars={len(node.text)} "
-                f"tokens={self.splitter._tokenizer(node.text).__len__()}"
-            )
 
         return [node.text for node in nodes]

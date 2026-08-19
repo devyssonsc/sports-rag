@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chunk import Chunk
@@ -49,3 +49,7 @@ class ChunkRepository:
         statement = select(Chunk).order_by(Chunk.id)
         result = await self.db.scalars(statement)
         return list(result.all())
+
+    async def delete_all(self) -> None:
+        await self.db.execute(delete(Chunk))
+        await self.db.commit()

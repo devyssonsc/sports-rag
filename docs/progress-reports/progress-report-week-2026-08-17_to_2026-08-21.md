@@ -70,6 +70,33 @@ mensurável, sem alterar o comportamento de produção do chat.
     decrescentes (context relevance limitada pela métrica de precisão); próximo
     foco em **chunking** e **query rewriting**.
 
+## 19/08/2026
+
+-   **Comando `reindex`** para o chunking sweep: apaga chunks (Postgres) e vetores
+    densos (Qdrant), re-parte todos os artigos com `chunk_size`/`overlap` dados e
+    re-embeda — mantendo os artigos. CLI `run_eval reindex`. Limpeza de `print`
+    de debug no `LlamaIndexChunkingService`.
+-   **Descoberta que redirecionou o sweep:** o modelo de embeddings
+    `multilingual-e5-large-instruct` tem **teto rígido de 512 tokens** — a
+    Together **rejeita** (erro 400), não trunca. Provado empiricamente. Logo,
+    **não dá para subir o chunk** acima de ~512 com o e5. Além disso, a Together
+    **não oferece nenhum modelo de embeddings de contexto longo**.
+-   **Decisão:** trocar para embeddings **locais de contexto longo** via fastembed
+    — `jinaai/jina-embeddings-v2-base-en` (**8192 tokens**, 768-dim, inglês,
+    simétrico). Corre em CPU, **sem custo de API** (a Together fica só para o LLM).
+-   **Fase A + B (troca de modelo, medidas e REJEITADAS — ver ADR-009):**
+    `EmbeddingService` trocado para fastembed/jina (`VECTOR_SIZE` 768, sem prefixo
+    e5) e medido contra o baseline e5+rerank (0.484 / 0.989 / 0.961):
+    -   `jina-350` = **0.439 / 0.975 / 0.955** — pior nas três (modelo mais fraco).
+    -   `jina-1024` = **0.430 / 0.931 / 0.958** — chunks maiores **não ajudaram** e
+        baixaram a groundedness.
+    -   Confirma o padrão da sessão: este corpus premeia recuperação **precisa**,
+        não mais contexto.
+-   **Decisão: reverter para o e5** (`ADR-009`). Código do jina revertido;
+    reindex de volta a e5 (350/50, 1024-dim). O comando `reindex` fica (útil para
+    experiências futuras). O e5 tem teto de 512 tokens, por isso chunks grandes
+    ficam fora do alcance sem trocar de modelo de embeddings.
+
 ------------------------------------------------------------------------
 
 # Estado atual
@@ -78,20 +105,11 @@ mensurável, sem alterar o comportamento de produção do chat.
 
 -   Harness de avaliação da RAG Triad (nativo, LLM-as-a-judge) — Fase 6.
 -   Corpus e conjunto de perguntas congelados; leaderboard de experiências.
--   Produção: query no padrão instruct do e5 + reranking cross-encoder local.
+-   Produção: embeddings e5 (instruct na query) + reranking cross-encoder local.
+-   Comando `reindex` (base para experiências de chunking / troca de modelo).
 
 ## Próximos passos
 
-1.  **Chunking sweep (próximo experimento).** Variar `chunk_size`/`overlap` no
-    `LlamaIndexChunkingService` (hoje 350/50) — ex.: 256/32, 512/64. Para cada
-    configuração: reindexar (chunks + embeddings densos e, se aplicável, o índice
-    esparso), correr o harness e comparar no leaderboard. Requer um passo de
-    reindexação limpa (apagar chunks/vetores e regerar) — o corpus de artigos
-    fica igual; o que muda é a granularidade. Atenção: reindexar re-embeda via
-    Together (custo).
-2.  **Query rewriting / HyDE.** O LLM reescreve/expande a pergunta antes do
-    retrieval; útil sobretudo nas perguntas temáticas.
-3.  **Recall@k com respostas-verdade** — anotar a(s) fonte(s) esperada(s) por
-    pergunta para medir cobertura (a métrica atual mede só precisão).
-4.  Paralelizar a avaliação de Context Relevance no harness (reduzir latência).
-5.  (Opcional) juiz distinto do gerador para reduzir enviesamento same-model.
+1.  **Recall@k com respostas-verdade** — medir cobertura (a métrica atual é só
+    precisão).
+4.  Query rewriting / HyDE; paralelizar a avaliação de Context Relevance.

@@ -167,6 +167,73 @@ async def _index_sparse() -> None:
     print(f"Done. Sparse collection '{vector_repository.SPARSE_COLLECTION_NAME}' ready.")
 
 
+async def _reindex(chunk_size: int, chunk_overlap: int) -> None:
+    """Rebuild chunks + dense vectors from the existing articles.
+
+    Destructive: deletes all chunks (Postgres) and dense vectors (Qdrant), then
+    re-chunks every article with the given size/overlap and re-embeds. Articles
+    (the frozen corpus) are untouched. This is the base step of the chunking
+    sweep — the retrieval config (e5-instruct + rerank) is unchanged.
+    """
+    from app.database.postgres import SessionLocal
+    from app.repositories.article_repository import ArticleRepository
+    from app.repositories.chunk_repository import ChunkRepository
+    from app.repositories.vector_repository import VectorRepository
+    from app.services.chunk_service import ChunkService
+    from app.services.embedding_service import EmbeddingService
+    from app.services.llama_index_chunking_service import LlamaIndexChunkingService
+
+    embedding_service = EmbeddingService()
+    vector_repository = VectorRepository()
+
+    print(f"Reindexing (chunk_size={chunk_size}, chunk_overlap={chunk_overlap}).")
+    print("Clearing dense vectors (Qdrant) and chunks (Postgres)...")
+    await vector_repository.recreate_dense_collection()
+
+    total_chunks = 0
+    async with SessionLocal() as db:
+        chunk_repository = ChunkRepository(db)
+        article_repository = ArticleRepository(db)
+
+        await chunk_repository.delete_all()
+
+        chunk_service = ChunkService(
+            LlamaIndexChunkingService(
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+            ),
+            chunk_repository,
+        )
+
+        articles = await article_repository.list()
+        print(f"Re-chunking and embedding {len(articles)} articles...")
+
+        for index, article in enumerate(articles, start=1):
+            chunks = await chunk_service.create_chunks(article)
+            if chunks:
+                embeddings = await embedding_service.embed_documents(
+                    [chunk.content for chunk in chunks]
+                )
+                for chunk, embedding in zip(chunks, embeddings):
+                    await vector_repository.upsert_chunk_embedding(
+                        chunk_id=chunk.id,
+                        article_id=chunk.article_id,
+                        embedding=embedding,
+                    )
+                total_chunks += len(chunks)
+            if index % 50 == 0:
+                print(f"  {index}/{len(articles)} articles, {total_chunks} chunks")
+
+    print(
+        f"Done: {len(articles)} articles -> {total_chunks} chunks "
+        f"(size={chunk_size}, overlap={chunk_overlap})."
+    )
+    print(
+        "Note: the BM25 sparse index is now stale (chunk ids changed). "
+        "Re-run 'index-sparse' before using --hybrid."
+    )
+
+
 def _board() -> None:
     from evaluation.leaderboard import load_leaderboard, render_leaderboard
 
@@ -234,6 +301,24 @@ def main() -> None:
         help="Backfill the BM25 sparse collection from all chunks (for --hybrid).",
     )
 
+    reindex_parser = sub.add_parser(
+        "reindex",
+        help="Rebuild chunks + dense vectors with a given chunk size/overlap "
+             "(chunking sweep). Destructive; keeps articles.",
+    )
+    reindex_parser.add_argument(
+        "--chunk-size",
+        type=int,
+        required=True,
+        help="Target chunk size in tokens (e.g. 256, 350, 512).",
+    )
+    reindex_parser.add_argument(
+        "--chunk-overlap",
+        type=int,
+        required=True,
+        help="Chunk overlap in tokens (e.g. 32, 50, 64).",
+    )
+
     sub.add_parser("board", help="Print the leaderboard of all experiments.")
 
     args = parser.parse_args()
@@ -251,6 +336,8 @@ def main() -> None:
         ))
     elif args.command == "index-sparse":
         asyncio.run(_index_sparse())
+    elif args.command == "reindex":
+        asyncio.run(_reindex(args.chunk_size, args.chunk_overlap))
     elif args.command == "board":
         _board()
 

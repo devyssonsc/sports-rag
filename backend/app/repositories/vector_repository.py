@@ -18,6 +18,8 @@ class VectorRepository:
     COLLECTION_NAME = "article_chunks"
     SPARSE_COLLECTION_NAME = "article_chunks_sparse"
     SPARSE_VECTOR_NAME = "text"
+    # Dense vector dimension — must match the embedding model
+    # (intfloat/multilingual-e5-large-instruct = 1024).
     VECTOR_SIZE = 1024
 
     def __init__(self):
@@ -72,6 +74,26 @@ class VectorRepository:
                     distance=Distance.COSINE,
                 ),
             )
+
+    async def recreate_dense_collection(self) -> None:
+        """Drop and recreate the dense collection (clears all vectors).
+
+        Used by reindexing: old points reference chunk ids that no longer exist
+        after a re-chunk, so the collection is rebuilt from empty.
+        """
+        try:
+            await self.client.delete_collection(self.COLLECTION_NAME)
+        except UnexpectedResponse:
+            pass
+
+        await self.client.create_collection(
+            collection_name=self.COLLECTION_NAME,
+            vectors_config=VectorParams(
+                size=self.VECTOR_SIZE,
+                distance=Distance.COSINE,
+            ),
+        )
+        self._collection_ready = True
 
         self._collection_ready = True
 
