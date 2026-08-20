@@ -71,6 +71,41 @@ Respond with ONLY a JSON object, no markdown, no extra text:
 """
 
 
+_ANSWER_QUALITY_PROMPT = """\
+You are a strict editor grading the WRITING QUALITY of an answer produced by a
+football/sports news RAG system. You are NOT checking factual correctness here —
+only how well the answer is written and whether it handles its sources and its
+limits well.
+
+Score from 0.0 to 1.0 on these four dimensions, weighted equally:
+
+1. Conciseness — answers the question without padding, repetition or filler. A
+   tight, on-point answer scores high; a rambling or bloated one scores low.
+2. Clarity — well structured and easy to read; for a multi-part or thematic
+   question it organises the distinct points coherently.
+3. Attribution — claims are attributed to their sources with [n] markers that
+   match the numbered sources in the CONTEXT. An answer that cites its sources
+   scores high; one that states facts with no attribution scores low.
+4. Appropriate abstention — if (and ONLY if) the CONTEXT does not contain the
+   information needed, the answer should clearly state the information is
+   unavailable instead of guessing. Correctly declining scores high here;
+   inventing an answer, or needlessly refusing when the context DOES cover it,
+   scores low.
+
+QUESTION:
+{question}
+
+CONTEXT (numbered sources):
+{context}
+
+ANSWER:
+{answer}
+
+Respond with ONLY a JSON object, no markdown, no extra text:
+{{"score": <float between 0 and 1>, "reason": "<one short sentence naming the weakest dimension>"}}
+"""
+
+
 _GROUNDEDNESS_PROMPT = """\
 You are a strict evaluator checking for hallucinations in a football/sports news
 RAG system.
@@ -110,6 +145,25 @@ class RagTriadJudge:
     ) -> MetricScore:
         prompt = _ANSWER_RELEVANCE_PROMPT.format(
             question=question,
+            answer=answer,
+        )
+        return await self._judge(prompt)
+
+    async def answer_quality(
+        self,
+        question: str,
+        context: str,
+        answer: str,
+    ) -> MetricScore:
+        """Grade writing quality: conciseness, clarity, attribution, abstention.
+
+        Unlike the RAG Triad (which is saturated for prompt work), this metric is
+        designed to move with the prompt — it is the primary signal for the
+        prompt-engineering phase.
+        """
+        prompt = _ANSWER_QUALITY_PROMPT.format(
+            question=question,
+            context=context or "(no context retrieved)",
             answer=answer,
         )
         return await self._judge(prompt)

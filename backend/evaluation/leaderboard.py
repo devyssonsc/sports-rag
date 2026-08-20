@@ -37,6 +37,8 @@ def save_run(summary: RunSummary) -> Path:
         "context_relevance": summary.mean_context_relevance,
         "groundedness": summary.mean_groundedness,
         "answer_relevance": summary.mean_answer_relevance,
+        "answer_quality": summary.mean_answer_quality,
+        "citation": summary.mean_citation,
         "recall": summary.mean_recall,
         "latency_s": summary.mean_latency_seconds,
     }
@@ -69,7 +71,8 @@ def render_leaderboard(rows: list[dict]) -> str:
 
     header = (
         f"{'experiment':<24} {'ctx.rel':>8} {'ground':>8} "
-        f"{'ans.rel':>8} {'recall':>8} {'#q':>4}  {'judge':<18}"
+        f"{'ans.rel':>8} {'quality':>8} {'cite':>8} {'recall':>8} "
+        f"{'#q':>4}  {'judge':<18}"
     )
     lines = [header, "-" * len(header)]
     for row in rows:
@@ -78,6 +81,8 @@ def render_leaderboard(rows: list[dict]) -> str:
             f"{fmt(row.get('context_relevance')):>8} "
             f"{fmt(row.get('groundedness')):>8} "
             f"{fmt(row.get('answer_relevance')):>8} "
+            f"{fmt(row.get('answer_quality')):>8} "
+            f"{fmt(row.get('citation')):>8} "
             f"{fmt(row.get('recall')):>8} "
             f"{row.get('questions', 0):>4}  "
             f"{judge_tag(row):<18}"

@@ -20,6 +20,22 @@ Each is scored 0–1 by the LLM, with a chain-of-thought reason:
 `None`/`NaN` for a metric means it could not be computed (e.g. no context
 retrieved) — informative, not an error.
 
+### Two more metrics for prompt work (ADR-011)
+
+The RAG Triad is saturated for prompt engineering (Answer Relevance sits at 1.0 and
+Context Relevance is retrieval-only), so two prompt-sensitive metrics were added:
+
+- **Answer Quality** — LLM judge (independent, temp 0): a single 0..1 over
+  conciseness, clarity, attribution and appropriate abstention. The primary signal
+  when iterating on the prompt.
+- **Citation** — deterministic (no LLM): the prompt numbers the sources and the
+  answer must cite `[n]`. Scores valid / total markers and flags any marker that
+  points to no real source (a fabricated citation). `None` when there is nothing to
+  cite (a correct abstention).
+
+Evaluation generation runs at **temperature 0** so a prompt change is the only thing
+that moves the answer (production `/chat` is unaffected).
+
 ## Workflow
 
 ```bash
@@ -48,6 +64,7 @@ docker compose exec backend python -m evaluation.run_eval board
 | `--candidates N` | Candidate pool before reranking (default 20). |
 | `--window N` | Sentence-window: widen each final chunk with ±N neighbours. |
 | `--hybrid` | Fuse dense + BM25 (RRF). Requires `index-sparse` first. |
+| `--hard` | Use the adversarial set (`questions_hard.json`: unanswerable, ambiguous, hard thematic) instead of the frozen 20. Its own baseline. |
 
 Reranking, sentence-window and hybrid are toggled here for experiments;
 production wires only reranking (via `dependencies.py`).
@@ -61,4 +78,6 @@ production wires only reranking (via `dependencies.py`).
 - `run_eval.py` — CLI.
 - `_retry.py` — retry transient provider errors.
 - `questions.txt` — the frozen question set (committed).
+- `questions_hard.json` — the adversarial set (`--hard`): each entry has `text`,
+  `answerable`, `kind` (committed).
 - `results/`, `corpus_snapshot.json`, `sample_articles.md` — generated, gitignored.

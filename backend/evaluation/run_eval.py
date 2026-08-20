@@ -18,9 +18,11 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 from pathlib import Path
 
 QUESTIONS_PATH = Path(__file__).parent / "questions.txt"
+HARD_QUESTIONS_PATH = Path(__file__).parent / "questions_hard.json"
 
 
 def load_questions(path: Path = QUESTIONS_PATH) -> list[str]:
@@ -36,6 +38,32 @@ def load_questions(path: Path = QUESTIONS_PATH) -> list[str]:
     if not questions:
         raise SystemExit(f"No questions found in {path} (all blank/comments).")
     return questions
+
+
+def load_hard_questions(
+    path: Path = HARD_QUESTIONS_PATH,
+) -> tuple[list[str], dict[str, dict]]:
+    """Load the adversarial set: a JSON list of ``{text, answerable, kind}``.
+
+    Returns the question texts (in order) and a ``{text: {answerable, kind}}`` map
+    for the harness. Kept separate from the frozen 20 so historical comparisons on
+    the standard set stay valid; this set has its own baseline.
+    """
+    if not path.exists():
+        raise SystemExit(f"Hard questions file not found: {path}")
+
+    entries = json.loads(path.read_text(encoding="utf-8"))
+    questions = [e["text"].strip() for e in entries]
+    meta = {
+        e["text"].strip(): {
+            "answerable": e.get("answerable", True),
+            "kind": e.get("kind", "standard"),
+        }
+        for e in entries
+    }
+    if not questions:
+        raise SystemExit(f"No questions found in {path}.")
+    return questions, meta
 
 
 async def _sample(count: int) -> None:
@@ -85,6 +113,7 @@ async def _run(
     hyde: bool,
     multi_query: bool,
     retrieval_only: bool,
+    hard: bool,
 ) -> None:
     from app.database.postgres import SessionLocal
     from evaluation import corpus
@@ -103,8 +132,13 @@ async def _run(
         for warning in corpus.diff_against(snapshot, article_ids, chunk_count):
             print(f"WARNING (corpus drift): {warning}")
 
-    questions = load_questions()
+    if hard:
+        questions, question_meta = load_hard_questions()
+    else:
+        questions, question_meta = load_questions(), {}
     mode = f"top-{limit}"
+    if hard:
+        mode += ", hard set"
     if hybrid:
         mode += ", hybrid"
     if rerank:
@@ -130,6 +164,7 @@ async def _run(
         hyde=hyde,
         multi_query=multi_query,
         retrieval_only=retrieval_only,
+        question_meta=question_meta,
     )
     detail_path = save_run(summary)
 
@@ -139,6 +174,8 @@ async def _run(
     print(f"context relevance : {_fmt(summary.mean_context_relevance)}")
     print(f"groundedness      : {_fmt(summary.mean_groundedness)}")
     print(f"answer relevance  : {_fmt(summary.mean_answer_relevance)}")
+    print(f"answer quality    : {_fmt(summary.mean_answer_quality)}")
+    print(f"citation          : {_fmt(summary.mean_citation)}")
     print(f"recall@k          : {_fmt(summary.mean_recall)}")
     print(f"mean latency (s)  : {summary.mean_latency_seconds}")
     print(f"detail written to : {detail_path}")
@@ -329,6 +366,12 @@ def main() -> None:
         help="Skip generation + triad judging; compute only recall@k. "
              "(HyDE still calls the LLM to build the query.)",
     )
+    run_parser.add_argument(
+        "--hard",
+        action="store_true",
+        help="Use the adversarial set (questions_hard.json: unanswerable, "
+             "ambiguous, hard thematic) instead of the frozen 20.",
+    )
 
     sub.add_parser(
         "index-sparse",
@@ -370,6 +413,7 @@ def main() -> None:
             args.hyde,
             args.multi_query,
             args.retrieval_only,
+            args.hard,
         ))
     elif args.command == "index-sparse":
         asyncio.run(_index_sparse())

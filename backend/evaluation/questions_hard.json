@@ -1,0 +1,62 @@
+[
+  {
+    "text": "How many goals did Cristiano Ronaldo score for Al-Nassr in the 2024/25 season?",
+    "answerable": false,
+    "kind": "unanswerable",
+    "note": "Ronaldo/Al-Nassr appear (he misses the season start), but a past-season goal tally is not transfer news; on-topic chunks will be retrieved, tempting a fabricated number."
+  },
+  {
+    "text": "What was the final score of the 2026 UEFA Super Cup?",
+    "answerable": false,
+    "kind": "unanswerable",
+    "note": "The corpus previews the Super Cup (teams, form, officiating) but the match result cannot be reported yet; the model should decline, not invent a scoreline."
+  },
+  {
+    "text": "Which Premier League club did Kylian Mbappe sign for this summer?",
+    "answerable": false,
+    "kind": "unanswerable",
+    "note": "False premise: Mbappe features via Real Madrid storylines, not a PL move. Good response declines or corrects the premise instead of naming a club."
+  },
+  {
+    "text": "What is the exact release clause in Lamine Camara's Monaco contract?",
+    "answerable": false,
+    "kind": "unanswerable",
+    "note": "The corpus has a rejected bid (and a rough fee) for Camara, but the release clause is a different, likely-absent detail; partial context tempts a hallucinated figure."
+  },
+  {
+    "text": "Did the club complete the signing?",
+    "answerable": false,
+    "kind": "ambiguous",
+    "note": "No referent (which club, which signing). Good behaviour is to note the question is unclear / ask which deal, not to guess from whatever was retrieved."
+  },
+  {
+    "text": "How much did they pay for him, and when does the deal expire?",
+    "answerable": false,
+    "kind": "ambiguous",
+    "note": "Unresolved pronouns with no antecedent. Tests whether the model flags the ambiguity or latches onto arbitrary retrieved context."
+  },
+  {
+    "text": "Compare how Real Madrid and Barcelona are approaching this summer's transfer window, in incomings versus outgoings.",
+    "answerable": true,
+    "kind": "thematic-hard",
+    "note": "Both clubs' windows are covered; requires cross-club synthesis and an explicit comparison, not a single-article lookup."
+  },
+  {
+    "text": "Across the recent news, what role are American owners and investors playing in football, and which specific clubs are involved?",
+    "answerable": true,
+    "kind": "thematic-hard",
+    "note": "Harder variant of the American-owners theme: must enumerate the clubs/investors, not just describe the trend."
+  },
+  {
+    "text": "What are the most significant contract and squad-number decisions Real Madrid has made recently, and who do they involve?",
+    "answerable": true,
+    "kind": "thematic-hard",
+    "note": "Synthesis across distinct articles (e.g. Vinicius Junior's extension and Dean Huijsen's shirt number)."
+  },
+  {
+    "text": "Summarise Aston Villa's transfer activity this summer, both the players linked and any completed moves.",
+    "answerable": true,
+    "kind": "thematic-hard",
+    "note": "Aston Villa features across several items (e.g. Tielemans); requires gathering and organising them."
+  }
+]
