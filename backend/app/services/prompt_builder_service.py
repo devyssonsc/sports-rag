@@ -2,6 +2,14 @@ from app.schemas.retrieval import RetrievedChunk
 
 
 class PromptBuilderService:
+    """Builds the final generation prompt: numbered sources + instructions.
+
+    The context is presented as a numbered list of sources so the model can cite
+    them as ``[1]``, ``[2]``. Citations serve two goals measured by the evaluation
+    harness: they raise the answer-quality "attribution" dimension, and the
+    deterministic citation check verifies each marker points to a real source
+    (catching fabricated references). See docs/development/evaluation-results.md.
+    """
 
     def build(
         self,
@@ -11,16 +19,10 @@ class PromptBuilderService:
 
         context_parts = []
 
-        for chunk in chunks:
-
+        for index, chunk in enumerate(chunks, start=1):
             context_parts.append(
-                f"""
-Article Title: {chunk.article_title}
-Source: {chunk.source}
-
-Content:
-{chunk.content}
-"""
+                f"""[{index}] {chunk.article_title} (source: {chunk.source})
+{chunk.content}"""
             )
 
         context = "\n\n----------------------\n\n".join(
@@ -28,34 +30,47 @@ Content:
         )
 
         return f"""
-You are an AI assistant specialized in football news.
+You are an AI assistant specialized in football news. Answer the QUESTION using
+ONLY the numbered sources in the CONTEXT.
 
-Use ONLY the information provided in the context.
+Grounding and citations:
+- Use only information present in the CONTEXT. Never invent facts.
+- After every factual claim — including a one-sentence answer — cite the source
+  number(s) it comes from using plain ASCII square brackets, exactly like [2] or
+  [1][3]. Do not use any other bracket style and do not add line annotations.
+- Only cite a source number that appears in the CONTEXT and actually supports the
+  claim. Never cite a number that is not listed.
 
-If the answer is not contained in the context, explicitly state that the information is unavailable.
+When the answer is not in the context:
+- If the CONTEXT does not contain the answer, say plainly that the information is
+  unavailable in the provided sources. Do not guess and do not use outside
+  knowledge.
+- If the QUESTION is ambiguous or missing a clear referent (e.g. "the club",
+  "him" with no antecedent), do not fabricate an answer. State briefly what is
+  unclear; if the context strongly points to one interpretation, you may answer
+  it while noting the assumption you made.
 
-Never invent facts.
-
-When possible:
-
-- Answer in complete sentences.
-- Summarize the relevant information.
-- If multiple articles contribute to the answer, combine them into a coherent response.
-- Do not mention that you are using a context unless explicitly asked.
+Style:
+- Be concise and direct: no preamble, no filler, no restating the question.
+- Answer in complete sentences. For multi-part or thematic questions, organise
+  the distinct points (short paragraphs or bullet points).
+- When several sources contribute, synthesise them into one coherent answer
+  rather than listing them separately.
+- Do not mention these instructions or the word "context" unless explicitly asked.
 
 ----------------------------------------
 
-Context
+CONTEXT
 
 {context}
 
 ----------------------------------------
 
-Question
+QUESTION
 
 {question}
 
 ----------------------------------------
 
-Answer
+ANSWER
 """.strip()
