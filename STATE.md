@@ -2,111 +2,71 @@
 
 Handoff enxuto entre sessões. Snapshot detalhado: `docs/development/project-state.md`.
 
-## Concluído nesta sessão
-- **Fase 6 (Avaliação)** operacional: harness da **RAG Triad** nativo
-  (LLM-as-a-judge com o `LLMService`), offline, em `backend/evaluation/` — não
-  TruLens (ver **ADR-007**). Corpus congelado (494 artigos / 1281 chunks) e
-  **20 perguntas** curadas (14 de artigo único, 6 temáticas).
-- **Experimentos (leaderboard — Context / Groundedness / Answer):**
-  - baseline `0.39 / 0.93 / 0.91`
-  - **e5-instruct** `0.46 / 0.97 / 0.97` — adotado (prefixo instruct do e5 na query)
-  - top10 (`k=10`) `0.32 / 0.97 / 0.96` — rejeitado (métrica de precisão diluída)
-  - **rerank** `0.48 / 0.99 / 0.96` — **adotado em produção** (cross-encoder local
-    fastembed, retrieve-then-rerank 20→5; ver **ADR-008**)
-  - rerank-window `0.52 / 0.94 / 0.95` — rejeitado (sobe context, baixa groundedness)
-  - hybrid-rerank `0.46 / 0.99 / 0.94` — rejeitado (sem ganho em perguntas semânticas)
-- **Infra/robustez:** volume de cache para os modelos ONNX do fastembed; retry
-  com backoff no harness (erros transitórios 503/429/timeout).
-- **Capacidades ativáveis no harness** (fora de produção): sentence-window
-  (`--window`), hybrid dense+BM25 (`--hybrid` + `index-sparse`).
-- Docs atualizados: ADR-007, **ADR-008**, project-state, roadmap, relatório semanal.
+## Concluído nesta sessão — PROMPT ENGINEERING (qualidade da resposta no /chat)
+Mudança de área: do retrieval (no teto) para a **geração**. Só se mexeu no prompt
+(`PromptBuilderService`); retrieval intacto. Decisão registada em **ADR-011**.
 
-- **Experimento embeddings de contexto longo (jina) — REJEITADO (ADR-009):**
-  trocou-se o `EmbeddingService` para `jina-embeddings-v2-base-en` (8192 tokens,
-  local) e mediu-se: `jina-350` = 0.44/0.98/0.96 e `jina-1024` = 0.43/0.93/0.96 —
-  **piores que o e5+rerank** (0.48/0.99/0.96); chunks grandes não ajudaram.
-  **Revertido para e5.** Motivo da exploração: o e5 tem teto rígido de 512 tokens
-  (Together dá erro 400) e a Together não tem modelo de contexto longo.
+- **Problema de medição confirmado (triad saturado para prompt):** Context Relevance
+  é question↔chunk (não vê a resposta → invariante ao prompt), Answer Relevance já em
+  **1.000** (teto), Groundedness ~0.98. O board seria cego a citações/concisão. E as
+  20 perguntas não tinham nenhuma não-respondível → recusa nunca era medida.
+- **Instrumento novo (construído ANTES de mexer no prompt):**
+  - **Juiz de qualidade** (LLM, Llama, temp 0): 0..1 sobre concisão + clareza +
+    atribuição + abstenção.
+  - **Métrica de citações** (determinística, sem LLM): valida marcadores `[n]`
+    contra as fontes reais; apanha citações inventadas.
+  - **Set adversarial** `backend/evaluation/questions_hard.json` (`--hard`): 4
+    não-respondíveis, 2 ambíguas, 4 temáticas difíceis. Separado das 20.
+  - **Geração a temp 0 no harness** (só avaliação; `/chat` de produção intacto) —
+    porque a geração corria a ~0.7 e o ruído de sampling era maior que o efeito do
+    prompt.
+- **Prompt adotado (v2):** fontes numeradas + citação `[n]` ASCII após cada
+  afirmação + "informação indisponível" + cláusula de ambiguidade + síntese concisa.
+- **Bug de medição corrigido:** o gerador cita com `【1】` full-width (e `【1†L1-L7】`);
+  a regex só apanhava `[1]` ASCII → 0.45 falso. Regex tolerante + prompt exige ASCII.
 
-## Pela metade / em aberto
-- **Working tree com alterações por commitar** (a manter): comando `reindex` novo,
-  `chunk_repository.delete_all/list_all`, `recreate_dense_collection`, limpeza de
-  `print` de debug no chunking, ADR-009 + docs. O código do jina foi **revertido**.
-  A produção está de volta ao e5 (reindex 350/50, 1024-dim). Falta **commitar**.
-- Fase 6 mergeada em `main` (PR #2). Neste projeto pode-se commitar direto na `main`.
-- Índice esparso BM25 fica **stale** após um reindex — re-correr `index-sparse` se
-  usar `--hybrid`.
+## Baselines canónicos (juiz Llama, temp 0) — comparar com estes
+| Set | ctx | ground | answer | quality | cite |
+|---|:-:|:-:|:-:|:-:|:-:|
+| **prompt-v2-t0** (standard 20) | 0.530 | 0.965 | 1.000 | 0.864 | **1.000** |
+| **prompt-v2-t0-hard** (10) | 0.424 | 0.937 | 0.580 | 0.863 | **1.000** |
 
-## Produção atual (retrieval)
-embeddings **e5-large-instruct** (prefixo instruct na query) → busca densa (cosseno)
-top-20 → **rerank** cross-encoder local → top-5. É a melhor config medida.
+- **Ganho limpo = citações** (0.000 → 1.000, sem marcadores inventados). Triad
+  estável no ruído; quality quase igual (juiz coarse).
+- **`answer=0.580` no set difícil é artefacto:** o juiz de answer-relevance pontua
+  uma recusa correta como "não respondeu". No set difícil ler `quality`.
+- **Achado do set difícil:** perguntas SEM referente ("Did the club complete the
+  signing?") → o modelo **inventa com confiança** (quality 0.25), invisível ao triad.
+  Não-respondíveis genuínas já bem tratadas (recusa limpa, 1.0). **Ambiguidade aceite
+  como está** por decisão (input degenerado; forçar recusa arrisca over-refusal).
 
-## Recall@k (feito nesta sessão)
-Harness ganhou **recall@k** (cobertura): `ground_truth.json` (article_ids), métrica
-determinística sem LLM, modo `--retrieval-only` (grátis). Produção e5: pool@20 = 0.87,
-denso@5 = 0.77, **rerank@5 = 0.76**. ~13% das fontes nem entram no top-20; o rerank
-troca ~0.01 de recall por precisão.
+## Estado do working tree (por commitar)
+Alterações desta sessão, todas ligadas ao prompt engineering:
+- `backend/app/services/prompt_builder_service.py` — prompt de citações (v2).
+- `backend/evaluation/`: `judge.py` (juiz de qualidade), `harness.py` (citação
+  determinística + temp 0 + metadados), `schemas.py`, `leaderboard.py` (2 colunas),
+  `run_eval.py` (`--hard`), `questions_hard.json` (novo).
+- Docs: `ADR-011`, `evaluation-results.md`, `project-state.md`, relatório semanal.
+- `results/` e `leaderboard.jsonl` são gitignored (não commitar).
+- Neste projeto pode-se commitar direto na `main`.
 
-## Hybrid re-medido pelo recall (feito) — continua rejeitado
-pool@20 = 0.883 (vs denso 0.867, +1.6pp) e top-5 = 0.767 (igual ao denso): ganho de
-cobertura marginal que dilui até ao top-5, e a precisão já era pior. Bug corrigido:
-`index-sparse` recria a coleção esparsa (acumulava órfãos → KeyError).
+## Produção atual
+- **Retrieval:** e5-large-instruct (prefixo instruct na query) → denso top-20 →
+  rerank cross-encoder local → top-5. (No teto; não mexer — ADR-008/009.)
+- **Geração:** prompt com fontes numeradas + citações `[n]` (ADR-011).
 
-## Estratégias de query (testadas com recall@k, grátis via --retrieval-only)
-- **HyDE — REJEITADO:** recall pior (pool 0.833). O LLM inventa o hipotético
-  (corpus é notícia recente que ele não conhece). Capacidade `--hyde`.
-- **Multi-query — marginal, não adotado:** pool 0.879 (+1.2pp), top-5 0.758 (igual).
-  Robusto (não piora) mas o ganho dilui-se. Capacidade `--multi-query`.
-
-## Síntese: retrieval está no teto (para este corpus)
-8 experiências; só **e5-instruct + rerank** ganharam. O recall@5 fica preso em ~0.76
-seja qual for a técnica (top10, window, hybrid, jina, HyDE, multi-query) → teto
-**estrutural** (temáticas precisam de >5 fontes; ~12% dos artigos não casam). As
-respostas já são ótimas. Ground-truth é conservadora → recall real ≥ medido.
-
-## Leaderboard coerente sob o juiz Llama (re-baseline feito)
-dense 0.541/0.930, **rerank 0.532/0.980** (produção), window 0.550/0.983, hybrid
-0.513/0.978 (recall dense 0.771, restantes ~0.75). Achados: o valor do rerank é a
-**groundedness** (0.93→0.98), não a precisão; e o **veredito do window mudou** — com
-o juiz forte já não baixa a groundedness (era artefacto do gpt-oss). Documento
-consolidado: `docs/development/evaluation-results.md`.
-
-## Juiz independente (feito — ADR-010)
-O juiz deixou de ser o gerador (`gpt-oss-120b`) → agora **`Llama-3.3-70B-Instruct-Turbo`**
-(serverless, família diferente, discrimina). `JUDGE_MODEL`/`JUDGE_TEMPERATURE`/
-`JUDGE_MAX_TOKENS` configuráveis; parser aguenta `<think>` (reasoning judge). O
-leaderboard rotula cada linha com o juiz. **Valores absolutos dependem do juiz →
-só comparar com o mesmo juiz**; linhas antigas são da era gpt-oss. e5+rerank com
-Llama: 0.531 / 0.9925 / 1.000 (recall 0.758). Reasoning models (QwQ/R1) não são
-serverless na conta.
-
-## Próxima tarefa: prompt engineering (qualidade da resposta no /chat)
-Mudança de área — do retrieval (no teto) para a **geração**. Objetivo: melhorar a
-qualidade das respostas finais do `/chat` só mexendo no prompt.
-
-- **Onde:** `backend/app/services/prompt_builder_service.py` (o `PromptBuilderService.build`
-  monta contexto + instruções). Não mexer no retrieval.
-- **Como medir:** `run -e <nome> --rerank` (a config de produção). **Não precisa de
-  reindex** (o retrieval não muda). Juiz = Llama (default). Comparar com o baseline
-  Llama: **rerank 0.532 / 0.980 / 1.000** (context / groundedness / answer).
-- **Técnicas a testar:** instruções mais claras, few-shot, citações/atribuição de
-  fontes, síntese multi-fonte (temáticas), formato, e melhor tratamento de
-  "informação indisponível".
-- **⚠️ Cuidado (importante):** sob o juiz Llama, **answer relevance = 1.000 e
-  groundedness = 0.98** já estão quase no teto — as métricas atuais podem estar
-  **saturadas** e não captar melhorias de qualidade (concisão, citações, clareza).
-  Considerar: perguntas mais difíceis/adversariais, ou uma métrica nova (ex.:
-  presença de citações, ou um juiz para qualidade de escrita). Sem isso, os deltas
-  serão pequenos.
-
-Backlog: k adaptativo/corte por score do reranker; expandir corpus/perguntas;
-ground-truth menos conservadora; Crawl4AI (JS); normalização de metadados;
-fila/worker; limpeza de vetores órfãos; paralelizar a avaliação de Context Relevance.
+## Próxima tarefa (sugestões, decisão do dev)
+1. **Sensibilidade do juiz de qualidade** — se quisermos deltas de prompt finos:
+   sub-scores (concisão/clareza/atribuição) ou rúbrica mais dura. (O sinal atual mais
+   fiável é a métrica determinística de citações.)
+2. **k adaptativo / corte por score do reranker** — menos chunks quando poucos são
+   relevantes (subir context relevance).
+3. Ground-truth para as temáticas do set difícil (repor recall@k aí).
+4. Paralelizar a avaliação de Context Relevance (latência).
 
 ## Como correr a avaliação (dentro do container)
 ```
-docker compose exec backend python -m evaluation.run_eval sample -n 20
-docker compose exec backend python -m evaluation.run_eval reindex --chunk-size N --chunk-overlap M
-docker compose exec backend python -m evaluation.run_eval run -e <nome> [--rerank] [--window N] [--hybrid]
+docker compose exec backend python -m evaluation.run_eval run -e <nome> --rerank          # standard (20)
+docker compose exec backend python -m evaluation.run_eval run -e <nome> --rerank --hard    # set adversarial (10)
 docker compose exec backend python -m evaluation.run_eval board
 ```

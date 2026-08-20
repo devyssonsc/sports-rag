@@ -147,6 +147,46 @@ mensurável, sem alterar o comportamento de produção do chat.
     (metodologia, log completo de experiências, análise de recall e de juízes,
     leaderboards por juiz, conclusões, índice de ADRs 007–010).
 
+### Mudança de área: PROMPT ENGINEERING (qualidade da resposta no /chat)
+
+-   **Problema de medição diagnosticado (o triad está saturado para prompt):** só se
+    mexe no prompt (`PromptBuilderService`), retrieval intacto. Mas Context Relevance
+    é question↔chunk (não vê a resposta → invariante ao prompt), Answer Relevance já
+    está em **1.000** (teto), e Groundedness em ~0.98. O board seria cego a citações,
+    concisão e clareza. Além disso, as 20 perguntas **não têm nenhuma não-respondível**
+    → a recusa nunca era medida.
+-   **Instrumento novo construído ANTES de mexer no prompt (ADR-011):**
+    -   **Juiz de qualidade** (LLM, Llama, temp 0): 0..1 sobre concisão + clareza +
+        atribuição + abstenção apropriada.
+    -   **Métrica de citações** (determinística, sem LLM): o prompt numera as fontes e
+        a resposta cita `[n]`; valida marcador válido/inventado. Apanha citações
+        alucinadas de graça.
+    -   **Set adversarial** `questions_hard.json` (`--hard`): 4 não-respondíveis, 2
+        ambíguas, 4 temáticas difíceis — separado das 20 (comparabilidade preservada).
+-   **Baseline com o instrumento novo** (juiz Llama): standard **0.533/0.978/1.000/
+    quality 0.863/cite 0.000**; o triad reproduziu ao 3.º decimal → pipeline intacto.
+-   **Bug de medição apanhado e corrigido:** o gerador cita com **parênteses
+    full-width** `【1】` (e `【1†L1-L7】`); a regex só apanhava `[1]` ASCII → contava
+    citações reais como zero (0.45 falso). Regex tolerante + o prompt passou a exigir
+    `[n]` ASCII. Taxa real de citação = **1.0**.
+-   **Prompt adotado (v2):** fontes numeradas + citação `[n]` após cada afirmação +
+    "informação indisponível" + cláusula de ambiguidade + síntese concisa.
+-   **Rigor: geração a temp 0 no harness** (só avaliação; produção `/chat` intacta).
+    Descoberto que a geração corria à temperatura default (~0.7) → **o ruído de
+    sampling era maior que o efeito do prompt** (uma temática oscilava groundedness
+    ±0.2). Baselines re-fixados a temp 0.
+-   **Resultado (temp 0, canónico):** standard **cite 0.000 → 1.000** (ganho limpo:
+    atribuição verificável, zero marcadores inventados; triad estável no ruído,
+    quality 0.864). No set difícil, o instrumento **expôs uma falha invisível ao
+    triad**: perguntas sem referente ("Did the club complete the signing?") levam o
+    modelo a **inventar com confiança** (quality 0.25) enquanto ground/answer ficam
+    ~1.0. As **não-respondíveis genuínas já são bem tratadas** (recusa limpa, 1.0).
+    Ambiguidade **aceite como está** por decisão (input degenerado single-turn;
+    forçar recusa arrisca over-refusal em perguntas boas).
+-   **Lição:** para trabalho de prompt, o triad é guarda de regressão, não sinal de
+    progresso; a métrica **determinística** (citações) deu o sinal mais fiável.
+    Documentado em **ADR-011** e `evaluation-results.md`.
+
 ------------------------------------------------------------------------
 
 # Estado atual
@@ -158,12 +198,17 @@ mensurável, sem alterar o comportamento de produção do chat.
 -   Produção: embeddings e5 (instruct na query) + reranking cross-encoder local.
 -   Comando `reindex` (base para experiências de chunking / troca de modelo).
 -   Métrica **recall@k** + modo `--retrieval-only` no harness.
+-   **Prompt de produção com citações** `[n]` verificáveis (ADR-011).
+-   **Instrumento de qualidade do prompt:** juiz de qualidade + métrica de citações
+    determinística + set adversarial (`--hard`) + geração determinística (temp 0).
 
 ## Próximos passos
 
-1.  **Multi-query (query expansion)** — o LLM gera N reformulações da *pergunta*;
-    recupera-se com cada e fundem-se (RRF). Não pede factos ao modelo (ao contrário
-    do HyDE), por isso deve ajudar as temáticas / o recall.
+1.  **Sensibilidade do juiz de qualidade** (se quisermos deltas de prompt mais
+    finos): sub-scores (concisão/clareza/atribuição) ou rúbrica mais dura.
 2.  **k adaptativo / corte por score do reranker** — subir a context relevance
     devolvendo menos chunks quando poucos são relevantes.
-3.  Paralelizar a avaliação de Context Relevance no harness (reduzir latência).
+3.  **Multi-query (query expansion)** — capacidade já no harness (`--multi-query`);
+    marginal no recall, revisitar só se o corpus/perguntas crescerem.
+4.  Paralelizar a avaliação de Context Relevance no harness (reduzir latência).
+5.  Ground-truth para as temáticas do set difícil (repor recall@k aí).

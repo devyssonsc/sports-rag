@@ -32,6 +32,16 @@ question that appear among the retrieved ones. Measures *coverage*. Ground-truth
 `backend/evaluation/ground_truth.json` (authored source articles — conservative, so
 true recall ≥ measured). Article ids are stable across reindexes; chunk ids are not.
 
+Two more metrics were added for **prompt** work (ADR-011), because the Triad is
+saturated for it (Answer Relevance is at 1.0, Context Relevance is retrieval-only):
+
+- **Answer Quality** — LLM judge, single 0..1 over conciseness, clarity,
+  attribution and appropriate abstention. The primary signal for prompt changes.
+- **Citation** — deterministic (no LLM): the prompt numbers the sources and the
+  answer must cite `[n]`; the check scores valid / total markers and flags markers
+  that point to no real source (a fabricated citation). `None` when there is nothing
+  to cite (a correct abstention).
+
 > **Judge caveat:** absolute triad values depend on the judge model, so **only
 > comparisons made with the same judge are valid**. Each leaderboard row records
 > its judge. Rows below labeled "gpt-oss (self)" used the generator as judge; the
@@ -127,6 +137,52 @@ Hybrid remains the weakest (lowest context and recall) — consistent across jud
 
 ---
 
+## Prompt engineering (judge: Llama-3.3-70B; ADR-011)
+
+Retrieval frozen at production (e5-instruct + rerank); only `PromptBuilderService`
+changed. Generation was made **deterministic** (`temperature=0`) for these runs so a
+prompt change is the only thing that moves the answer — the `-t0` rows are the
+canonical baselines. Two new columns: Answer Quality (LLM) and Citation
+(deterministic).
+
+**Standard set (the frozen 20):**
+
+| Prompt                    | Context | Grounded | Answer | Quality | Cite  |
+|---------------------------|:------:|:-------:|:-----:|:------:|:-----:|
+| baseline (no citations)   | 0.533  | 0.978   | 1.000 | 0.863  | 0.000 |
+| **cited-sources (adopted, t0)** | 0.530 | 0.965 | 1.000 | 0.864 | **1.000** |
+
+**Adversarial set (`questions_hard.json`: 4 unanswerable, 2 ambiguous, 4 hard
+thematic; run with `--hard`):**
+
+| Prompt                    | Context | Grounded | Answer | Quality | Cite  |
+|---------------------------|:------:|:-------:|:-----:|:------:|:-----:|
+| baseline                  | 0.432  | 0.950   | 0.900 | 0.830  | 0.000 |
+| **cited-sources (adopted, t0)** | 0.424 | 0.937 | 0.580 | 0.863 | **1.000** |
+
+Takeaways:
+
+1. **Citations are the clean win** — 0.000 → 1.000: every claim attributed to a
+   verifiable source, zero fabricated markers. Real product value the Triad is blind
+   to; the Triad itself moved only within noise.
+2. **The Triad is saturated for prompt work**, as predicted — kept as a regression
+   guard, not a progress signal. The LLM quality judge is only weakly sensitive
+   (0.863 → 0.864 despite full attribution; attribution is 1 of 4 diluted dims).
+3. **The adversarial set earned its place.** It caught a failure invisible to the
+   Triad: on **referent-less** questions the model confidently fabricates (*"Did the
+   club complete the signing?"* → *"Yes, Chelsea signed Pep Chavarría"*, quality
+   0.25) while Groundedness/Answer stay ~1.0. **Genuine unanswerable** questions are
+   already handled well (clean abstention, quality 1.0). Ambiguity was left as-is by
+   decision (degenerate single-turn input; forcing refusal risks over-refusal).
+4. **Answer Relevance is the wrong lens for the hard set** (0.580): it scores a
+   correct "information unavailable" as "did not answer". Read **Quality** there.
+5. **Generator non-determinism was bigger than the prompt effect** — the default
+   ~0.7 made a single thematic question swing Groundedness ±0.2. Fixing eval
+   generation at temp 0 (production unchanged) is what made the comparison honest;
+   the deterministic citation metric gave the most trustworthy signal of the phase.
+
+---
+
 ## Conclusions
 
 1. **The pipeline is well-optimized.** e5-instruct + rerank is the best config; the
@@ -138,6 +194,10 @@ Hybrid remains the weakest (lowest context and recall) — consistent across jud
 4. **The judge is part of the measurement.** Absolute scores depend on it; only
    same-judge comparisons are valid, and a capable judge matters as much as an
    independent one.
+5. **Match the metric to what you are changing.** For prompt work the Triad is
+   saturated and blind; a deterministic citation check and an adversarial set of
+   unanswerable/ambiguous questions were needed to see the change — and the
+   deterministic metric proved the most trustworthy (ADR-011).
 
 ## Decision records
 
@@ -145,3 +205,5 @@ Hybrid remains the weakest (lowest context and recall) — consistent across jud
 - ADR-008 — local cross-encoder reranking (adopted)
 - ADR-009 — embedding model: stay on e5 (long-context evaluated and rejected)
 - ADR-010 — independent judge model
+- ADR-011 — answer-quality evaluation (quality judge + citation metric, temp 0) and
+  the adopted cited-sources prompt

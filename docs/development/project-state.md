@@ -178,7 +178,9 @@ Status: ðŸŸ¢ Completed
 Implemented
 
 - PromptBuilderService
-- Context injection
+- Context injection as numbered sources
+- Cited-sources prompt: every claim attributed as `[n]`; "information unavailable"
+  and ambiguity handling; concise multi-source synthesis (ADR-011)
 
 ---
 
@@ -218,11 +220,15 @@ Implemented
 
 - RAG Triad feedback functions (chain-of-thought reasons) + deterministic
   recall@k against a ground-truth article set
-- Runner over a frozen corpus + question set; three metrics judged concurrently,
+- Prompt-quality metrics (ADR-011): an answer-quality judge (conciseness, clarity,
+  attribution, abstention) and a deterministic citation check; an adversarial set
+  (`questions_hard.json`, `--hard`: unanswerable / ambiguous / hard thematic);
+  deterministic generation (temp 0) for reproducible prompt comparisons
+- Runner over a frozen corpus + question set; metrics judged concurrently,
   retry/backoff on transient provider errors; `--retrieval-only` (free) mode
 - Independent judge model, labeled per leaderboard row (ADR-010)
 - CLI (`sample` / `reindex` / `index-sparse` / `run` / `board`) with `--rerank`,
-  `--window`, `--hybrid`, `--hyde`, `--multi-query` toggles
+  `--window`, `--hybrid`, `--hyde`, `--multi-query`, `--hard` toggles
 
 **Full results, methodology and conclusions:** `evaluation-results.md`.
 Summary: e5-instruct + local reranking are adopted in production (ADR-008); every
