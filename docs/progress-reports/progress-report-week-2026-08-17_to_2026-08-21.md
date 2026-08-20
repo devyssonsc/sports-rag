@@ -147,7 +147,10 @@ mensurável, sem alterar o comportamento de produção do chat.
     (metodologia, log completo de experiências, análise de recall e de juízes,
     leaderboards por juiz, conclusões, índice de ADRs 007–010).
 
-### Mudança de área: PROMPT ENGINEERING (qualidade da resposta no /chat)
+## 20/08/2026
+
+**Mudança de área: PROMPT ENGINEERING** (qualidade da resposta no `/chat`) — do
+retrieval (no teto) para a **geração**, só mexendo em `PromptBuilderService`.
 
 -   **Problema de medição diagnosticado (o triad está saturado para prompt):** só se
     mexe no prompt (`PromptBuilderService`), retrieval intacto. Mas Context Relevance
